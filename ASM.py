@@ -30,6 +30,9 @@ def rotate_shape(landmarks):
     n = landmarks[0].size
     cov = np.divide(cov,n-1)
     eigW, eigV = np.linalg.eig(cov)
+    print eigW
+    eigW = eigW/np.linalg.norm(eigW)
+    print eigW
     landmarks = np.dot(eigV,landmarks)
     return landmarks
 
@@ -44,7 +47,7 @@ if __name__ == '__main__':
     #load all set of landmarks for first tooth
     folder = '_Data/landmarks/original/'
     for i in range(1,15):
-        path = folder + 'landmarks' + str(i) + '-1.txt'
+        path = folder + 'landmarks' + str(i) + '-3.txt'
         landmarks = load_landmarks(path)
         x = landmarks[0]
         y = landmarks[1]
