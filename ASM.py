@@ -30,9 +30,7 @@ def rotate_shape(landmarks):
     n = landmarks[0].size
     cov = np.divide(cov,n-1)
     eigW, eigV = np.linalg.eig(cov)
-    print eigW
-    eigW = eigW/np.linalg.norm(eigW)
-    print eigW
+    eigV = eigV/np.linalg.norm(eigV)
     landmarks = np.dot(eigV,landmarks)
     return landmarks
 
