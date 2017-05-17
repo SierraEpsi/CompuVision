@@ -6,26 +6,41 @@ import math
 # this part of the code is only executed if the file is run stand-alone
 if __name__ == '__main__':
     ddepth = cv2.CV_16S;
+    cv2.namedWindow("img1", cv2.WINDOW_NORMAL)
+    cv2.namedWindow("img2", cv2.WINDOW_NORMAL)
     # read an image
     img = cv2.imread('_Data/Radiographs/02.tif')
     img = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
+    img = cv2.medianBlur(img, 11)
+    cv2.imshow('img1', img)
 
-    # show the image, and wait for a key to be pressed
-    cv2.namedWindow("img", cv2.WINDOW_NORMAL)
-    cv2.imshow('img', img)
-    cv2.waitKey(0)
-
-    # remove spickle noise, quantum noise?
-    img = cv2.medianBlur(img, 7)
-
-    img = cv2.bilateralFilter(img, 9, 200, 150)
-
-    img = cv2.adaptiveThreshold(img, 256, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 0)
-
-    cv2.namedWindow("img2", cv2.WINDOW_NORMAL)
+    img = cv2. equalizeHist(img)
     cv2.imshow('img2', img)
     cv2.waitKey(0)
 
-    img = cv2.HoughCircles(img, cv.CV_HOUGH_GRADIENT, 10, 10, minRadius = 0, maxRadius = 100)
-    cv2.imshow('img', img)
+    img = cv2.adaptiveThreshold(img, 256, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY_INV, 33, 0)
+    cv2.imshow('img1', img)
     cv2.waitKey(0)
+
+    contours = cv2.findContours(img, cv.CV_RETR_EXTERNAL, cv.CV_CHAIN_APPROX_NONE)
+    cv2.imshow('img2', contours)
+
+    # # show the image, and wait for a key to be pressed
+    # cv2.namedWindow("img", cv2.WINDOW_NORMAL)
+    # cv2.imshow('img', img)
+    # cv2.waitKey(0)
+    #
+    # # remove spickle noise, quantum noise?
+    # img = cv2.medianBlur(img, 7)
+    #
+    # img = cv2.bilateralFilter(img, 9, 200, 150)
+    #
+    # img = cv2.adaptiveThreshold(img, 256, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 0)
+    #
+    # cv2.namedWindow("img2", cv2.WINDOW_NORMAL)
+    # cv2.imshow('img2', img)
+    # cv2.waitKey(0)
+    #
+    # img = cv2.HoughCircles(img, cv.CV_HOUGH_GRADIENT, 10, 10, minRadius = 0, maxRadius = 100)
+    # cv2.imshow('img', img)
+    # cv2.waitKey(0)
