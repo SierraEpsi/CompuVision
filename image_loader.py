@@ -20,22 +20,25 @@ if __name__ == '__main__':
 
     img_Blurred = cv2.medianBlur(img, 11)
     #cv2.GaussianBlur(img,(5,5),0,img,0,cv2.BORDER_DEFAULT)
-
     cv2.imshow('img2', img_Blurred)
+
+    ret,img_thresh = cv2.threshold(img_Blurred,100,235,cv2.THRESH_BINARY)
+    cv2.imshow('img3', img_thresh)
 
     #img = cv2. equalizeHist(img)
     #cv2.imshow('img3', img)
 
-    img2 = cv2.Laplacian(img_Blurred,ddepth,ksize=7,scale=-1,delta=10)
-    cv2.imshow('img4', img2)
+    #img2 = cv2.Laplacian(img_Blurred,ddepth=-1,ksize=7,scale=-1,delta=10)
+    img_Sobel = cv2.Sobel(img_thresh,ddepth,1,1,3)
+    cv2.imshow('img4', img_Sobel)
 
     # Convert to 8 bit, doesnt work..
-    # img_8U = np.array(img2, dtype=np.uint8)
-    # cv2.imshow('img5', img_8U)
+    img_8U = np.array(img_thresh, dtype=np.uint8)
+    cv2.imshow('img5', img_8U)
 
     # 1. Do canny (determine the right parameters) on the gray scale image
     t1 = 100
-    t2 = 50
+    t2 = 25
     edges = cv2.Canny(img_8U, t1, t2)
 
     # Show the results of canny
