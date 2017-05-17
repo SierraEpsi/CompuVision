@@ -100,11 +100,19 @@ if __name__ == '__main__':
     plt.show()
 
     eW, eV, mu = pca(X, nbImgs)
+    plt.clf()
+    plt.plot(mu[0:nbDims],mu[nbDims:])
+    plt.axis('off')
+    plt.savefig('test.png')
+    plt.clf()
+
     example = np.reshape(load_landmarks('_Data/landmarks/original/landmarks1-3.txt'),(1,nbDims*2))[0]
     example = project(example,eV,mu)
     example = reconstruct(example,eV,mu)
     plt.plot(example[0:nbDims],example[nbDims:])
     plt.show()
+
+
 
 
 
