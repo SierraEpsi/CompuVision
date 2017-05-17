@@ -12,18 +12,16 @@ if __name__ == '__main__':
     img = cv2.imread('_Data/Radiographs/02.tif')
     img = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
     img = cv2.medianBlur(img, 11)
+    img = cv2.bilateralFilter(img, 9, 200, 150)
     cv2.imshow('img1', img)
 
     img = cv2. equalizeHist(img)
     cv2.imshow('img2', img)
     cv2.waitKey(0)
 
-    img = cv2.adaptiveThreshold(img, 256, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY_INV, 33, 0)
+    img = cv2.adaptiveThreshold(img, 256, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY_INV, 15, 0)
     cv2.imshow('img1', img)
     cv2.waitKey(0)
-
-    contours = cv2.findContours(img, cv.CV_RETR_EXTERNAL, cv.CV_CHAIN_APPROX_NONE)
-    cv2.imshow('img2', contours)
 
     # # show the image, and wait for a key to be pressed
     # cv2.namedWindow("img", cv2.WINDOW_NORMAL)
