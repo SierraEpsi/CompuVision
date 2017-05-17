@@ -25,3 +25,7 @@ if __name__ == '__main__':
     cv2.namedWindow("img2", cv2.WINDOW_NORMAL)
     cv2.imshow('img2', img)
     cv2.waitKey(0)
+
+    img = cv2.HoughCircles(img, cv.CV_HOUGH_GRADIENT, 10, 10, minRadius = 0, maxRadius = 100)
+    cv2.imshow('img', img)
+    cv2.waitKey(0)
