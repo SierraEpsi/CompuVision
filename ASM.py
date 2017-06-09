@@ -28,23 +28,33 @@ def center_landmarks(landmarks):
     y = np.subtract(y,np.mean(y))
     p1.plot(x, y, '*')
     p1.plot(x, y)
+
     array = np.zeros(landmarks.shape)
     array[:,0] = x
     array[:,1] = y
     return array
 
-def rotate_shape(landmarks):
-    cov = np.dot(landmarks.T,landmarks)
+def rotate_shape(landmarks,eigV1=None):
+    cov = np.dot(landmarks.T, landmarks)
     n = landmarks.shape[0]
-    cov = np.divide(cov,n-1)
+    cov = np.divide(cov, n - 1)
     eigW, eigV = la.eig(cov)
-    eigV = eigV/la.norm(eigV)
-    rotated = np.dot(landmarks,eigV)
-    x = rotated[:,0]
-    y = rotated[:,1]
+    #eigV = eigV / la.norm(eigV)
+
+    if eigV1 == None:
+        x = landmarks[:, 0]
+        y = landmarks[:, 1]
+        rotated = landmarks
+        eigV1 = eigV
+    else:
+        rotated = np.dot(landmarks,eigV)
+        rotated = np.dot(rotated, eigV1.T)
+        x = rotated[:,0]
+        y = rotated[:,1]
     p2.plot(x, y, '*')
     p2.plot(x, y)
-    return rotated
+
+    return rotated, eigV1
 
 def scale_estimate(landmarks):
     x = landmarks[:,0]
@@ -52,18 +62,21 @@ def scale_estimate(landmarks):
     scale_factor = np.sqrt(np.sum(np.power(x,2)) + np.sum(np.power(y,2)))
     x = np.divide(x,scale_factor)
     y = np.divide(y,scale_factor)
-    p3.plot(x, y, '*')
-    p3.plot(x, y)
+
     array = np.zeros(landmarks.shape)
     array[:,0] = x
     array[:,1] = y
-    return array
+    return array, scale_factor
 
-def trans_rot(landmarks):
-    landmarks = center_landmarks(landmarks)
-    landmarks = rotate_shape(landmarks)
-    landmarks = scale_estimate(landmarks)
-    return landmarks
+def rescale(landmarks,meanSF):
+    x = landmarks[0]
+    y = landmarks[1]
+    x = x*meanSF
+    y = y*meanSF
+    p3.plot(x, y, '*')
+    p3.plot(x, y)
+
+    return x,y
 
 def pca(teeth, nbImgs):
     mu = np.mean(teeth, axis=0)
@@ -93,13 +106,26 @@ def computeModel(folderWithLandmarks,toothNbr,nbImgs,nbDims):
 
     X = np.zeros((nbImgs, 2 * nbDims))
     folder = folderWithLandmarks
+    SF = []
+    eigV = None
 
     for i in range(1, nbImgs + 1):
         path = folder + 'landmarks' + str(i) + '-' + str(toothNbr) + '.txt'
         landmarks = load_landmarks(path)
-        landmarks = trans_rot(landmarks)
+        landmarks = center_landmarks(landmarks)
+        landmarks, eigV = rotate_shape(landmarks,eigV) # uses first set as reference
+        landmarks, sf = scale_estimate(landmarks)
         x = landmarks[:,0]
         y = landmarks[:,1]
+        X[i - 1, 0:nbDims] = x
+        X[i - 1, nbDims:] = y
+        SF += [sf]
+
+    meanSF = np.mean(SF)
+    for i in range(1, nbImgs + 1):
+        landmarks = rescale([ X[i - 1, 0:nbDims],X[i - 1, nbDims:]],meanSF)
+        x = landmarks[0]
+        y = landmarks[1]
         X[i - 1, 0:nbDims] = x
         X[i - 1, nbDims:] = y
 
@@ -108,6 +134,7 @@ def computeModel(folderWithLandmarks,toothNbr,nbImgs,nbDims):
     eW, eV, mu = pca(X, nbImgs)
     plt.clf()
     plt.plot(mu[0:nbDims], mu[nbDims:])
+    plt.gca().invert_yaxis()
     plt.axis('off')
     plt.savefig('modelTooth'+ str(toothNbr) + '.png')
     plt.clf()
@@ -127,7 +154,7 @@ if __name__ == '__main__':
     eV,eW,mu = computeModel(folder,tooth,nbImgs,nbDims)
 
     # need to trans rot first!
-    example = load_landmarks('_Data/landmarks/mirrored/landmarks15-1.txt')
+    example = load_landmarks('_Data/landmarks/original/landmarks1-1.txt')
     example = trans_rot(example)
     example = np.reshape(example.T,(example.size))
     example = project(example,eV,mu)

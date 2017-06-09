@@ -26,7 +26,7 @@ def filterImage(img):
 
     # 1. Do canny (determine the right parameters) on the gray scale image
     t1 = 50
-    t2 = 30
+    t2 = 0
     img_Edges = cv2.Canny(img_Blurred, t1, t2, apertureSize=3)
     cv2.imshow('img4', img_Edges)
 
