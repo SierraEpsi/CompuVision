@@ -4,12 +4,6 @@ import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 
-
-print "Hello Mat"
-print "test1"
-print "gecloned"
-print "test 2"
-
 path = '_Data/landmarks/original/landmarks1-1.txt'
 path2 = '_Data/landmarks/original/landmarks2-1.txt'
 
@@ -26,8 +20,6 @@ plt.plot(x, y)
 landmarks2 = ASM.load_landmarks(path2)
 translated2 = ASM.center_landmarks(landmarks2)
 
-
-
 cov = np.dot(translated.T,translated)
 n = landmarks.shape[0]
 cov = np.divide(cov,n-1)
@@ -39,7 +31,6 @@ y = rotated[:, 1]
 plt.plot(x, y, '*')
 plt.plot(x, y)
 
-
 rotated2 = np.dot(translated2,eigV)
 x = rotated2[:, 0]
 y = rotated2[:, 1]
@@ -47,7 +38,6 @@ plt.plot(x, y, '*')
 plt.plot(x, y)
 
 plt.show()
-
 
 image = np.zeros((20,20))
 rect = [(1,1),(1,5),(5,5),(5,1)]
