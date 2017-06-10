@@ -93,7 +93,6 @@ if __name__ == '__main__':
                         mouseY = -1
                         refPt = []
                 if len(refPt) >= 2 :
-                        #cv2.rectangle(img,refPt[0],refPt[1],[0,0,255],2)
                         x1 = np.min((refPt[0][1],refPt[1][1]))
                         x2 = np.max((refPt[0][1],refPt[1][1]))
                         y1 = np.min((refPt[0][0],refPt[1][0]))
