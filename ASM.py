@@ -100,7 +100,7 @@ class ASM:
         eV = eV / norms
         return eW[:nbImgs], eV[:,:nbImgs], mu
 
-    def model(self, path):
+    def model(self, path, doPlot=False):
         points = self.load_landmarks(path)
 
         x = points[:, 0]
@@ -129,12 +129,27 @@ class ASM:
 
         w = points.shape[0]
         h = points.shape[1]
-        X = [x,y]
-        X = np.reshape(X,(w*h,1))[:,0]
+        Xo = [x,y]
+
+        X = np.reshape(Xo,(w*h,1))[:,0]
         Y = self.project(X)
         X = self.reconstruct(Y)
+        X = [X[:w],X[w:]]
 
-        return [X[:w],X[w:]]
+        if doPlot == True:
+            plt.clf()
+            plt.plot(Xo[0], Xo[1], '*')
+            plt.plot(Xo[0], Xo[1])
+            plt.plot(X[0], X[1], '*')
+            plt.plot(X[0], X[1])
+            plt.show()
+
+        # Root mean square
+        error = np.sum(np.power((np.asarray(Xo)-np.asarray(X)),2),1)/w
+        # Total length
+        error = np.sqrt(np.power(error[0],2) + np.power(error[1],2))
+
+        return X, error
 
     def project(self, X):
         Y = np.subtract(X ,self.mu)
@@ -189,12 +204,11 @@ if __name__ == '__main__':
     nbDims = 40
     tooth = 1
     active_shape_model = ASM(folder, nbImgs, nbDims, tooth)
-    X = active_shape_model.model('_Data/landmarks/original/landmarks2-1.txt')
-    plt.clf()
-    plt.plot(X[0],X[1], '*')
-    plt.show()
+    X, error = active_shape_model.model('_Data/landmarks/original/landmarks2-1.txt')
+    print "The error of a matching tooth: ", error
 
-
+    X, error = active_shape_model.model('_Data/landmarks/original/landmarks2-2.txt')
+    print "The error of a non-matching tooth: ", error
 
 
 

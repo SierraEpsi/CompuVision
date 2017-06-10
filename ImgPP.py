@@ -17,18 +17,35 @@ def PPimg(img):
     imgY = (imgY1 + imgY2)/2
 
     img = (imgX + imgY)/2
-    img = cv2.threshold(img, 16, 256, cv2.THRESH_BINARY)[1]
+    clahe = cv2.createCLAHE(clipLimit=1.0, tileGridSize=(25, 25))
+    img = clahe.apply(img)
+    img = cv2.threshold(img, 30, 256, cv2.THRESH_BINARY)[1]
 
     return img
 
+def getMouseCoord(event, x, y, flags, params):
+    global mouseX, mouseY, refPt
+    if event == cv2.EVENT_LBUTTONDBLCLK:
+        mouseX, mouseY = x, y
+    elif event == cv2.EVENT_LBUTTONDOWN:
+        refPt.append((x, y))
+
+def selectSqr(img):
+    cv2.namedWindow('img', cv2.WINDOW_NORMAL)
+    cv2.resizeWindow('img', 1500, 1000)
+    cv2.imshow('img',img)
+    while True:
+        k = cv2.waitKey(0) & 0xFF
+        # if the window is closed or 'esc' is pressed stop
+        if k == 255 or k == 27:
+            break
+        elif k == ord('a'):
+            print mouseX, mouseY
 
 if __name__ == '__main__':
     # read an image
-    img = cv2.imread('_Data/Radiographs/04.tif')
+    img = cv2.imread('_Data/Radiographs/01.tif')
     img = PPimg(img)
 
-    # Show image
-    cv2.namedWindow('img', cv2.WINDOW_NORMAL)
-    cv2.resizeWindow('img', 1500, 1000)
-    cv2.imshow('img', img)
-    cv2.waitKey(0)
+    # Select square
+    selectSqr(img)
