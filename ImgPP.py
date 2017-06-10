@@ -4,11 +4,7 @@ import cv2
 
 def PPimg(img):
     img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    img = cv2.medianBlur(img,5)
     img = cv2.bilateralFilter(img,9,500,500)
-
-    clahe = cv2.createCLAHE(clipLimit=1.0, tileGridSize=(16, 16))
-    img = clahe.apply(img)
 
     imgX1 = cv2.Scharr(img,-1,1,0)
     imgX2 = cv2.Scharr(cv2.flip(img,1),-1,1,0)
@@ -21,7 +17,11 @@ def PPimg(img):
     imgY = cv2.addWeighted(imgY1, 0.5, imgY2, 0.5, 0)
 
     img = cv2.addWeighted(imgX, 0.5, imgY, 0.5, 0)
-    img = cv2.equalizeHist(img)
+
+    clahe = cv2.createCLAHE(clipLimit=1.5, tileGridSize=(16, 16))
+    img = clahe.apply(img)
+    img = cv2.medianBlur(img,7)
+
     # img = cv2.threshold(img, 30, 256, cv2.THRESH_BINARY)[1]
     t1 = 100
     t2 = 50
@@ -42,7 +42,6 @@ def getMouseCoord(event, x, y, flags, params):
             refPt.append((x,y))
 
 def selectSqr(img):
-
     global mouseX, mouseY, refPt
     mouseX = -1
     mouseY = -1
