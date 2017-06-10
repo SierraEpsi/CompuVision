@@ -19,7 +19,11 @@ def PPimg(img):
     img = (imgX + imgY)/2
     clahe = cv2.createCLAHE(clipLimit=1.0, tileGridSize=(25, 25))
     img = clahe.apply(img)
-    img = cv2.threshold(img, 30, 256, cv2.THRESH_BINARY)[1]
+    #img = cv2.threshold(img, 30, 256, cv2.THRESH_BINARY)[1]
+    t1 = 100
+    t2 = 50
+    img = cv2.Canny(img, t1, t2, apertureSize=3)
+
 
     return img
 
