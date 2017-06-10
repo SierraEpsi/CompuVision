@@ -3,7 +3,7 @@ import numpy as np
 import cv2
 import cv
 import math
-import image_loader
+import ImgPP
 from ASM import ASM as ASM
 import matplotlib.pyplot as plt
 
@@ -43,7 +43,7 @@ if __name__ == '__main__':
         img = cv2.imread('_Data/Radiographs/01.tif')
        # img = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
 
-        img = image_loader.filterImage(img)
+        img = ImgPP.PPimg(img)
         img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
         
         #path = '_Data/landmarks/original/landmarks1-1.txt'
@@ -77,19 +77,21 @@ if __name__ == '__main__':
                         break
 
                 if mouseX != -1 and mouseY != -1:
+                        img1 = np.copy(img)
                         model_translated = np.copy(model)
                         model_translated = np.rint(model_translated).astype(int)
                         model_translated[:,0] = model_translated[:,0] + mouseX
                         model_translated[:,1] = model_translated[:,1] + mouseY
                         for i in xrange(len(model_translated) - 1):
-                                cv2.line(img, (model_translated[i, 0], model_translated[i, 1]), (model_translated[i + 1, 0], model_translated[i + 1, 1]), [0, 0, 255],2)
-                                cv2.imshow('img1', img)
+                                cv2.line(img1, (model_translated[i, 0], model_translated[i, 1]), (model_translated[i + 1, 0], model_translated[i + 1, 1]), [0, 0, 255],2)
+                                cv2.imshow('img1', img1)
                                 k = cv2.waitKey(20) & 0xFF
-                        cv2.line(img, (model_translated[-1, 0], model_translated[-1, 1]), (model_translated[0, 0], model_translated[0, 1]), [0, 0, 255],2)
-                        cv2.imshow('img1', img)
-                        k = cv2.waitKey(20) & 0xFF
+                        cv2.line(img1, (model_translated[-1, 0], model_translated[-1, 1]), (model_translated[0, 0], model_translated[0, 1]), [0, 0, 255],2)
+                        cv2.imshow('img1', img1)
+                        k = cv2.waitKey(2000) & 0xFF
                         mouseX = -1
                         mouseY = -1
+                        refPt = []
                 if len(refPt) >= 2 :
                         #cv2.rectangle(img,refPt[0],refPt[1],[0,0,255],2)
                         x1 = np.min((refPt[0][1],refPt[1][1]))
