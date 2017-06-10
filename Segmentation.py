@@ -29,29 +29,22 @@ def findClosestPoints(model,pnts):
 
                 target [m] = pnts[np.argmin(d).astype(np.int32)]
 
-
-        plt.plot(target[:,0],target[:,1],'r.')
-        plt.plot(model[:,0],model[:,1],'b.')
+        plt.clf()
+        plt.plot(target[:,0],target[:,1])
+        plt.plot(model[:,0],model[:,1])
         plt.show()
 
-        return target
+        return target.astype(int)
 
 def translate(model,target):
+
         ctx = np.mean(target[:,0])
         cty = np.mean(target[:,1])
         cmx = np.mean(model[:,0])
         cmy = np.mean(model[:,1])
 
-        plt.plot(model[:,0],model[:,1])
-        plt.show()
-        model[:,0] = model[:,0] - cmx
-        model[:,1] = model[:,1] - cmy
-
-        plt.plot(model[:, 0], model[:, 1])
-
-        model[:,0] = model[:,0] + ctx
-        model[:,1] = model[:,1] + cty
-        plt.plot(model[:, 0], model[:, 1])
+        model[:,0] = model[:,0] - cmx + ctx
+        model[:,1] = model[:,1] - cmy + cty
 
         return model
 
@@ -66,15 +59,10 @@ def rotate(model,target):
         cov = np.divide(cov, n - 1)
         eigW, eigVm = np.linalg.eig(cov)
 
-        plt.plot(model[:,0],model[:,1])
-        plt.show()
-
         rotated = np.dot(model, eigVm)
-        plt.plot(rotated[:,0],rotated[:,1])
         model = np.dot(rotated, eigVt.T)
-        plt.plot(model[:,0],model[:,1])
 
-        return model
+        return model.astype(int)
 
 if __name__ == '__main__':
 
@@ -101,7 +89,7 @@ if __name__ == '__main__':
         model[:,0] = ASM.mu[:nbDims]
         model[:,1] = ASM.mu[nbDims:]
 
-
+        it=10
 
         cv2.namedWindow('img1',cv2.WINDOW_NORMAL)
         cv2.setMouseCallback('img1', getMouseCoord)
@@ -152,18 +140,26 @@ if __name__ == '__main__':
                                 pnts[:,0] = pntsYX[:,1]
                                 pnts[:,1] = pntsYX[:,0]
 
-                                plt.plot(pnts[:,0],pnts[:,1],'r.')
+                                #plt.plot(pnts[:,0],pnts[:,1],'r.')
                                 #plt.gca().invert_xaxis()
-                                plt.gca().invert_yaxis()
-                                plt.show()
+                                #plt.gca().invert_yaxis()
+                                #plt.show()
                         refPt =[]
 
-        for i in xrange(10):
+        for i in xrange(it):
+
                 target = findClosestPoints(model,pnts)
-                target = target.astype(int)
-                
+
                 target[:,0] = target[:,0] + x1
                 target[:,1] = target[:,1] + y1
+
+
+                model, Err = ASM.model(target,3)
+                model = np.asarray(model,int).T
+
+                model = translate(model,target)
+                model = rotate(model,target)
+
                 for i in xrange(len(target) - 1):
                         cv2.line(img, (target[i, 0], target[i, 1]),
                                  (target[i + 1, 0], target[i + 1, 1]), [0, 0, 255], 2)
@@ -174,9 +170,6 @@ if __name__ == '__main__':
                 cv2.imshow('img1', img)
                 k = cv2.waitKey(20) & 0xFF
 
-                model = translate(model,target)
-                model = rotate(model,target)
-                model = model.astype(int)
                 for i in xrange(len(model) - 1):
                         cv2.line(img, (model[i, 0], model[i, 1]),
                                  (model[i + 1, 0], model[i + 1, 1]), [0, 255, 0], 2)
@@ -187,4 +180,5 @@ if __name__ == '__main__':
                 cv2.imshow('img1', img)
                 k = cv2.waitKey(20) & 0xFF
 
-        print(model)
+print ('end')
+

@@ -100,8 +100,8 @@ class ASM:
         eV = eV / norms
         return eW[:nbImgs], eV[:,:nbImgs], mu
 
-    def model(self, path, doPlot=False):
-        points = self.load_landmarks(path)
+    def model(self, points,n,doPlot=False):
+
 
         x = points[:, 0]
         y = points[:, 1]
@@ -133,7 +133,7 @@ class ASM:
 
         X = np.reshape(Xo,(w*h,1))[:,0]
         Y = self.project(X)
-        X = self.reconstruct(Y)
+        X = self.reconstruct(Y,n)
         X = [X[:w],X[w:]]
 
         if doPlot == True:
@@ -156,8 +156,9 @@ class ASM:
         Y = np.dot(Y,self.eV)
         return Y
 
-    def reconstruct(self, Y):
-        X = np.dot(Y, np.transpose(self.eV))
+    def reconstruct(self, Y, n=None):
+        if n == None: n = len(self.eV)
+        X = np.dot(Y, np.transpose(self.eV[:,:n]))
         X = X + self.mu
         return X
 
@@ -204,10 +205,12 @@ if __name__ == '__main__':
     nbDims = 40
     tooth = 1
     active_shape_model = ASM(folder, nbImgs, nbDims, tooth)
-    X, error = active_shape_model.model('_Data/landmarks/original/landmarks2-1.txt')
+    tooth1 = active_shape_model.load_landmarks('_Data/landmarks/original/landmarks2-1.txt')
+    tooth2 = active_shape_model.load_landmarks('_Data/landmarks/original/landmarks2-2.txt')
+    X, error = active_shape_model.model(tooth1,True)
     print "The error of a matching tooth: ", error
 
-    X, error = active_shape_model.model('_Data/landmarks/original/landmarks2-2.txt')
+    X, error = active_shape_model.model(tooth2,True)
     print "The error of a non-matching tooth: ", error
 
 
