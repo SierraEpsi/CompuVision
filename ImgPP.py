@@ -2,13 +2,18 @@ import numpy as np
 import matplotlib.pyplot as plt
 import cv2
 
-def PPimg(img):
+def enhance(img):
     img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    img = cv2.bilateralFilter(img,9,500,500)
+    img = cv2.bilateralFilter(img, 9, 500, 500)
 
-    imgX1 = cv2.Scharr(img,-1,1,0)
-    imgX2 = cv2.Scharr(cv2.flip(img,1),-1,1,0)
-    imgX2 = cv2.flip(imgX2,1)
+    return img;
+
+def PPimg(img):
+    img = enhance(img)
+
+    imgX1 = cv2.Scharr(img, -1, 1, 0)
+    imgX2 = cv2.Scharr(cv2.flip(img, 1), -1, 1, 0)
+    imgX2 = cv2.flip(imgX2, 1)
     imgX = cv2.addWeighted(imgX1, 0.5, imgX2, 0.5, 0)
 
     imgY1 = cv2.Scharr(img,-1,0,1)
@@ -22,7 +27,7 @@ def PPimg(img):
     img = clahe.apply(img)
     img = cv2.medianBlur(img,7)
 
-    # img = cv2.threshold(img, 30, 256, cv2.THRESH_BINARY)[1]
+    #img = cv2.threshold(img, 30, 256, cv2.THRESH_BINARY)[1]
     t1 = 100
     t2 = 50
     img = cv2.Canny(img, t1, t2, apertureSize=3)
