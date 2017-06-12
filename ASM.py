@@ -83,7 +83,6 @@ class ASM:
         y = y*meanSF
         p3.plot(x, y, '*')
         p3.plot(x, y)
-
         return x,y
 
     def pca(self, teeth, nbImgs):
@@ -100,9 +99,23 @@ class ASM:
         eV = eV / norms
         return eW[:nbImgs], eV[:,:nbImgs], mu
 
-    def model(self, points,n,doPlot=False):
+    def explain_pca(self, eWs):
+        tEW = np.sum(eWs)
+        eWs = sorted(eWs, reverse = True)
+        thr = 0.05 * eWs[0]
+        sEW = 0
+        i = 0
+        choice = -1
+        for eW in eWs:
+            i += 1
+            sEW += eW
+            if eW < thr and choice == -1:
+                choice = i
+            print i, 'eigenwaarden slagen erin om', sEW/tEW, '% van de data uit te leggen.'
+        print 'Ik het slim algoritme dat snel in elkaar is gestoken geweest stel dus voor om', choice, 'eigenwaarden te behouden.'
+        print 'lijkt u dat ook een goed idee?'
 
-
+    def model(self, points, n, doPlot=False):
         x = points[:, 0]
         y = points[:, 1]
         x = np.subtract(x, np.mean(x))
@@ -194,6 +207,7 @@ class ASM:
         plt.show()
 
         eW, eV, mu = self.pca(X, nbImgs)
+        self.explain_pca(eW)
         self.eV = eV
         self.mu = mu
 

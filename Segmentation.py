@@ -68,7 +68,7 @@ if __name__ == '__main__':
 
 
         # Img.shape = y x c
-        img = cv2.imread('_Data/Radiographs/01.tif')
+        img = cv2.imread('_Data/Radiographs/02.tif')
        # img = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
 
         img = ImgPP.PPimg(img)
