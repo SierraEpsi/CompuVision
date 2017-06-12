@@ -102,12 +102,6 @@ def do_it(img):
             min_intensity = path.intensity
             best_path = path
 
-    pts = best_path.return_points()
-    cv2.polylines(img2,[pts],False,(255,255,255), thickness=5)
-    cv2.namedWindow('img', cv2.WINDOW_NORMAL)
-    cv2.resizeWindow('img', 1500, 1000)
-    cv2.imshow('img', img2)
-    cv2.waitKey(0)
     return best_path.return_path()
 
 def do_it2(img, path):
@@ -162,10 +156,7 @@ def do_it2(img, path):
         new_pair = ((x1,y1),(bestX,bestY))
         pairs.append(new_pair)
         cv2.line(img2, new_pair[0],new_pair[1], (0,255,255), thickness=5)
-    cv2.namedWindow('img', cv2.WINDOW_NORMAL)
-    cv2.resizeWindow('img', 1500, 1000)
-    cv2.imshow('img', img2)
-    cv2.waitKey(0)
+    return pairs
 
 def do_it3(img, path):
     img = iPP.enhance(img)
@@ -219,12 +210,6 @@ def do_it3(img, path):
         new_pair = ((x1,y1),(bestX,bestY))
         pairs.append(new_pair)
         cv2.line(img2, new_pair[0],new_pair[1], (255,255,255), thickness=5)
-
-    cv2.namedWindow('img', cv2.WINDOW_NORMAL)
-    cv2.resizeWindow('img', 1500, 1000)
-    cv2.imshow('img', img2)
-    cv2.waitKey(0)
-
     return pairs
 
 def find_POI(img,pairs):
@@ -252,12 +237,20 @@ def find_POI(img,pairs):
 
 for i in range(1,10):
     img = cv2.imread('_Data/Radiographs/0' + str(i) + '.tif')
+    img2 = img.copy()
     best_path = do_it(img)
+
+    pairs = do_it2(img, best_path)
+    POI = find_POI(img, pairs)
+    for poi in POI:
+        cv2.rectangle(img2,poi,(poi[0]+5,poi[1]+5),(0,255,0),thickness =-1)
+
     pairs = do_it3(img, best_path)
     POI = find_POI(img, pairs)
     for poi in POI:
-        cv2.rectangle(img,poi,(poi[0]+5,poi[1]+5),(0,255,0),thickness =-1)
+        cv2.rectangle(img2,poi,(poi[0]+5,poi[1]+5),(0,255,0),thickness =-1)
+
     cv2.namedWindow('img', cv2.WINDOW_NORMAL)
     cv2.resizeWindow('img', 1500, 1000)
-    cv2.imshow('img', img)
+    cv2.imshow('img', img2)
     cv2.waitKey(0)
