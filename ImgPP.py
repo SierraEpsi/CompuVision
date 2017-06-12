@@ -1,11 +1,12 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import cv2
+import random
+from ACM import ACM as ACM
 
 def enhance(img):
     img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     img = cv2.bilateralFilter(img, 9, 500, 500)
-
     return img;
 
 def PPimg(img):
@@ -30,13 +31,13 @@ def PPimg(img):
     #img = cv2.threshold(img, 30, 256, cv2.THRESH_BINARY)[1]
     t1 = 100
     t2 = 50
-    img = cv2.Canny(img, t1, t2, apertureSize=3)
+    #img = cv2.Canny(img, t1, t2, apertureSize=3)
 
     return img
 
 # Used to track mouse
 def getMouseCoord(event, x, y, flags, params):
-    global mouseX, mouseY, refPt
+    global mouseX, mouseY, refPt, mouseAcrion
     if event == cv2.EVENT_LBUTTONDBLCLK:
         mouseX, mouseY = x, y
     elif event == cv2.EVENT_LBUTTONDOWN:
@@ -59,36 +60,32 @@ def selectSqr(img):
 
     doClose = False
     while True:
-        k = cv2.waitKey(0) & 0xFF
+        k = cv2.waitKey(20) & 0xFF
         # if the window is closed or 'esc' is pressed stop
-        if k == 255 or k == 27:
+        if k == 27:
             doClose = True
             break
-        # check if spacebar is pressed
         else:
-            cv2.imshow('img', img)
-            # press space to continue
-            if k == 32:
-                if len(refPt) == 2 or (mouseX != -1 and mouseY != -1):
-                    break
+            if mouseX != -1 and mouseY != -1:
+                break
     if doClose:
         return
 
-    if len(refPt) == 2:
-        x1 = np.min((refPt[0][1], refPt[1][1]))
-        x2 = np.max((refPt[0][1], refPt[1][1]))
-        y1 = np.min((refPt[0][0], refPt[1][0]))
-        y2 = np.max((refPt[0][0], refPt[1][0]))
-        roi = img[x1:x2, y1:y2]
-        if roi.shape[0] > 0 and roi.shape[1] > 0:
-            cv2.imshow('roi', roi)
-            k = cv2.waitKey(0) & 0xFF
-            pnts = np.where(roi > 0)  # contains all possible landmarks at estimated location
-            plt.plot(pnts[1], pnts[0], 'r.')
-            plt.gca().invert_xaxis()
-            plt.gca().invert_yaxis()
-            plt.show()
-        refPt = []
+    if mouseX != -1 and mouseY != -1:
+        points = [(mouseX+20,mouseY),(mouseX,mouseY+20),(mouseX-20,mouseY),(mouseX,mouseY-20)]
+
+        acm = ACM( 1, 1, 50 , img, points)
+        for i in range(0,100 ):
+            n_img = img.copy()
+            acm.greedy_step()
+            points = np.asarray(acm.pts).reshape((-1, 1, 2))
+            cv2.polylines(n_img, [points], True, (255,255,255),thickness=3)
+            cv2.resizeWindow('img', 1500, 1000)
+            cv2.setMouseCallback('img', getMouseCoord)
+            cv2.imshow('img', n_img)
+            cv2.waitKey(0)
+    cv2.waitKey(0)
+
 
 if __name__ == '__main__':
     # read an image

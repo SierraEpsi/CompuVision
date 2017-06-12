@@ -72,7 +72,7 @@ if __name__ == '__main__':
        # img = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
 
         img = ImgPP.PPimg(img)
-        img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
+        img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR) # Zou al moeten zijn na PPimg
         
         #path = '_Data/landmarks/original/landmarks1-1.txt'
         #landmarks = ASM.load_landmarks(path)
@@ -146,8 +146,8 @@ if __name__ == '__main__':
                                 #plt.show()
                         refPt =[]
 
+        print 'nextup'
         for i in xrange(it):
-
                 target = findClosestPoints(model,pnts)
 
                 target[:,0] = target[:,0] + x1

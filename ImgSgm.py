@@ -44,7 +44,7 @@ class JPath:
         self.pointsY = np.add(np.multiply(np.power(self.pointsX,2),fit[0]) + np.multiply(self.pointsX,fit[1]), fit[2])
         return [self.start, self.w, self.pointsY]
 
-def do_it(img):
+def find_jawline(img):
     img = iPP.enhance(img)
     h,w = img.shape
 
@@ -104,7 +104,7 @@ def do_it(img):
 
     return best_path.return_path()
 
-def do_it2(img, path):
+def find_lower_pairs(img, path):
     img = iPP.enhance(img)
     h,w = img.shape
     start = path[0]
@@ -158,7 +158,7 @@ def do_it2(img, path):
         cv2.line(img2, new_pair[0],new_pair[1], (0,255,255), thickness=5)
     return pairs
 
-def do_it3(img, path):
+def find_upper_pairs(img, path):
     img = iPP.enhance(img)
     h,w = img.shape
     start = path[0]
@@ -238,15 +238,14 @@ def find_POI(img,pairs):
 for i in range(1,10):
     img = cv2.imread('_Data/Radiographs/0' + str(i) + '.tif')
     img2 = img.copy()
-    best_path = do_it(img)
+    best_path = find_jawline(img)
 
-    pairs = do_it2(img, best_path)
+    pairs = find_lower_pairs(img, best_path)
     POI = find_POI(img, pairs)
-    for poi in POI:
-        cv2.rectangle(img2,poi,(poi[0]+5,poi[1]+5),(0,255,0),thickness =-1)
 
-    pairs = do_it3(img, best_path)
-    POI = find_POI(img, pairs)
+    pairs = find_upper_pairs(img, best_path)
+    POI.extend(find_POI(img, pairs))
+
     for poi in POI:
         cv2.rectangle(img2,poi,(poi[0]+5,poi[1]+5),(0,255,0),thickness =-1)
 
