@@ -7,82 +7,11 @@ from scipy.ndimage import morphology
 import cv2
 import cv2.cv as cv
 
-def Idunno():
-    img = cv2.imread('_Data/Radiographs/01.tif')
-    img = iPP.enhance(img)
-    h,w = img.shape
-    clahe = cv2.createCLAHE(clipLimit=1.5, tileGridSize=(16, 16))
-    img = clahe.apply(img)
-
-    edges = cv2.Canny(img, 50, 0, apertureSize=3)
-    kernel = np.ones((5,5),np.uint8)
-    edges = cv2.dilate(edges,kernel,iterations = 1)
-    edges = np.divide(edges,255)
-    img2 = img*edges
-
-    hist = cv2.calcHist([img2],[0],None,[256],[0,256])
-    hist = hist[1:]
-    mHist = np.argmax(hist)/2
-    img2 = cv2.threshold(img, mHist, 256, cv2.THRESH_BINARY)[1]
-
-    window = 10
-    wP = 0
-    nP = wP + window
-    while nP < w:
-        cImgWdw = img[:,wP:nP]
-        Hedge = np.sum(cImgWdw, 1)
-        point = Hedge[0]
-        pI = 0
-        hD = 0
-        lD = 0
-        points = [[],[]]
-        thr1 = 10000
-        i = 0
-        while i < len(Hedge)-1:
-            i += 1
-            nPoint = np.int64(Hedge[i])
-            dis = np.subtract(point,nPoint)
-            if dis > 0:
-                if dis > lD:
-                    lD = dis
-                else:
-                    if lD-dis > thr1:
-                        points[0].append(pI)
-                        points[1].append(point)
-                        point = np.min(Hedge[pI:i])
-                        pI = pI + np.argmin(Hedge[pI:i])
-                        i = pI
-                        hD = 0
-                        lD = 0
-            else:
-                if dis < hD:
-                    hD = dis
-                else:
-                    if dis-hD > thr1:
-                        points[0].append(pI)
-                        points[1].append(point)
-                        point = np.max(Hedge[pI:i])
-                        pI = pI + np.argmax(Hedge[pI:i])
-                        i = pI
-                        hD = 0
-                        lD = 0
-        points[0].append(pI)
-        points[1].append(point)
-        plt.plot(points[0],points[1],'*')
-        plt.plot(Hedge)
-        cv2.imshow('img', cImgWdw)
-        plt.show()
-        wP = nP
-        nP = wP + window
-
-    for point in points[0]:
-        img[point, :] = np.add(np.zeros((1, w)), 100)
-        img[point, :] = np.add(np.zeros((1, w)), 100)
-        img[point, :] = np.add(np.zeros((1, w)), 100)
-
 class JPath:
-    def __init__(self, point, w=25):
-        self.pointsX = [w]
+    def __init__(self, point, index, w=25):
+        self.w = w
+        self.start = index
+        self.pointsX = [w*index]
         self.pointsY = [point]
         self.intensity = 0
 
@@ -103,12 +32,18 @@ class JPath:
 
     def return_points(self):
         pts = []
+        fit = np.polyfit(self.pointsX, self.pointsY, 2)
+        self.pointsY = np.add(np.multiply(np.power(self.pointsX,2),fit[0]) + np.multiply(self.pointsX,fit[1]), fit[2])
         for i in range(0,len(self.pointsX)):
-            pts.append([self.pointsX[i],self.pointsY[i]])
+            pts.append([self.pointsX[i],int(self.pointsY[i])])
         pts = np.asarray(pts).reshape((-1, 1, 2))
         return pts
 
-# enhance bright structures
+    def return_path(self):
+        fit = np.polyfit(self.pointsX, self.pointsY, 2)
+        self.pointsY = np.add(np.multiply(np.power(self.pointsX,2),fit[0]) + np.multiply(self.pointsX,fit[1]), fit[2])
+        return [self.start, self.w, self.pointsY]
+
 def do_it(img):
     img = iPP.enhance(img)
     h,w = img.shape
@@ -155,7 +90,7 @@ def do_it(img):
 
     paths = []
     for best_i in pot_jaw_pts[int(0.35*len(pot_jaw_pts))]:
-        paths.append(JPath(best_i,int(0.35*len(pot_jaw_pts))*window))
+        paths.append(JPath(best_i, int(0.35*len(pot_jaw_pts)), window))
 
     for i in range(int(0.35*len(pot_jaw_pts))+1,int(0.65*len(pot_jaw_pts))):
         for path in paths:
@@ -168,12 +103,47 @@ def do_it(img):
             best_path = path
 
     pts = best_path.return_points()
-    cv2.polylines(img,[pts],False,(255,255,255))
+    cv2.polylines(img2,[pts],False,(255,255,255), thickness=5)
     cv2.namedWindow('img', cv2.WINDOW_NORMAL)
     cv2.resizeWindow('img', 1500, 1000)
-    cv2.imshow('img', img)
+    cv2.imshow('img', img2)
     cv2.waitKey(0)
+    return best_path.return_path()
+
+def do_it2(img, path):
+    img = iPP.enhance(img)
+    h,w = img.shape
+    start = path[0]
+    window = path[1]
+
+    imgX1 = cv2.Scharr(img, -1, 1, 0)
+    imgX2 = cv2.Scharr(cv2.flip(img, 1), -1, 1, 0)
+    imgX2 = cv2.flip(imgX2, 1)
+    img2 = cv2.addWeighted(imgX1, 0.5, imgX2, 0.5, 0)
+
+    # lower
+    img_vals = []
+    for i in range(0,len(path[2])):
+        x = (start + i) * window
+        y = int(path[2][i])
+        img_vals.append(np.sum(img2[y+50:y+200,x-window:x+window]))
+    fft = scipy.fftpack.rfft(img_vals)
+    fft[30:] = 0
+    smoothed = scipy.fftpack.irfft(fft)
+    loc_maxs_i = scipy.signal.argrelmax(smoothed)[0]
+
+    for max_i in loc_maxs_i:
+        x = (start + max_i) * window
+        y = int(path[2][max_i]) + 50
+        cv2.rectangle(img2,(x,y),(x+5,y+5),(255,255,255),thickness=-1)
+
+    plt.plot(smoothed)
+    cv2.namedWindow('img', cv2.WINDOW_NORMAL)
+    cv2.resizeWindow('img', 1500, 1000)
+    cv2.imshow('img', img2)
+    plt.show()
 
 for i in range(1,10):
     img = cv2.imread('_Data/Radiographs/0' + str(i) + '.tif')
-    do_it(img)
+    best_path = do_it(img)
+    do_it2(img, best_path)

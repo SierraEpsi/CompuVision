@@ -27,10 +27,10 @@ def PPimg(img):
     img = clahe.apply(img)
     img = cv2.medianBlur(img,7)
 
-    #img = cv2.threshold(img, 30, 256, cv2.THRESH_BINARY)[1]
+    img = cv2.threshold(img, 30, 256, cv2.THRESH_BINARY)[1]
     t1 = 100
     t2 = 50
-    img = cv2.Canny(img, t1, t2, apertureSize=3)
+    #img = cv2.Canny(img, t1, t2, apertureSize=3)
 
     return img
 
