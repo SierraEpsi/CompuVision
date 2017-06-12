@@ -121,29 +121,110 @@ def do_it2(img, path):
     imgX2 = cv2.flip(imgX2, 1)
     img2 = cv2.addWeighted(imgX1, 0.5, imgX2, 0.5, 0)
 
+    img3 = 255-img2
+
     # lower
     img_vals = []
     for i in range(0,len(path[2])):
         x = (start + i) * window
         y = int(path[2][i])
-        img_vals.append(np.sum(img2[y+50:y+200,x-window:x+window]))
+        img_vals.append(np.sum(img2[y+0:y+100,x-window:x+window]))
     fft = scipy.fftpack.rfft(img_vals)
     fft[30:] = 0
     smoothed = scipy.fftpack.irfft(fft)
-    loc_maxs_i = scipy.signal.argrelmax(smoothed)[0]
+    loc_maxs_i1 = scipy.signal.argrelmax(smoothed)[0]
 
-    for max_i in loc_maxs_i:
-        x = (start + max_i) * window
-        y = int(path[2][max_i]) + 50
-        cv2.rectangle(img2,(x,y),(x+5,y+5),(255,255,255),thickness=-1)
+    img_vals = []
+    for i in range(0, len(path[2])):
+        x = (start + i) * window
+        y = int(path[2][i])
+        img_vals.append(np.sum(img2[y + 50:y + 150, x - window:x + window]))
+    fft = scipy.fftpack.rfft(img_vals)
+    fft[30:] = 0
+    smoothed = scipy.fftpack.irfft(fft)
+    loc_maxs_i2 = scipy.signal.argrelmax(smoothed)[0]
 
-    plt.plot(smoothed)
+    # match points
+    pairs = []
+    for point1 in loc_maxs_i1:
+        min_intensity = float('inf')
+        x1 = (start + point1)*window
+        y1 = int(path[2][point1]) + 50
+        for point2 in loc_maxs_i2:
+            x2 = (start + point2) * window
+            y2 = int(path[2][point2]) + 100
+            intensity = cv.InitLineIterator(cv.fromarray(img3), (x1, y1), (x2, y2))
+            intensity = sum(intensity)
+            if intensity < min_intensity:
+                min_intensity = intensity
+                bestX = x2
+                bestY = y2
+        new_pair = ((x1,y1),(bestX,bestY))
+        pairs.append(new_pair)
+        cv2.line(img2, new_pair[0],new_pair[1], (255,255,255), thickness=5)
     cv2.namedWindow('img', cv2.WINDOW_NORMAL)
     cv2.resizeWindow('img', 1500, 1000)
     cv2.imshow('img', img2)
-    plt.show()
+    cv2.waitKey(0)
+
+def do_it3(img, path):
+    img = iPP.enhance(img)
+    h,w = img.shape
+    start = path[0]
+    window = path[1]
+
+    imgX1 = cv2.Scharr(img, -1, 1, 0)
+    imgX2 = cv2.Scharr(cv2.flip(img, 1), -1, 1, 0)
+    imgX2 = cv2.flip(imgX2, 1)
+    img2 = cv2.addWeighted(imgX1, 0.5, imgX2, 0.5, 0)
+
+    img3 = 255-img2
+
+    # lower
+    img_vals = []
+    for i in range(0,len(path[2])):
+        x = (start + i) * window
+        y = int(path[2][i])
+        img_vals.append(np.sum(img2[y-100:y-0,x-window:x+window]))
+    fft = scipy.fftpack.rfft(img_vals)
+    fft[30:] = 0
+    smoothed = scipy.fftpack.irfft(fft)
+    loc_maxs_i1 = scipy.signal.argrelmax(smoothed)[0]
+
+    img_vals = []
+    for i in range(0, len(path[2])):
+        x = (start + i) * window
+        y = int(path[2][i])
+        img_vals.append(np.sum(img2[y-150:y-50, x - window:x + window]))
+    fft = scipy.fftpack.rfft(img_vals)
+    fft[30:] = 0
+    smoothed = scipy.fftpack.irfft(fft)
+    loc_maxs_i2 = scipy.signal.argrelmax(smoothed)[0]
+
+    # match points
+    pairs = []
+    for point1 in loc_maxs_i1:
+        min_intensity = float('inf')
+        x1 = (start + point1)*window
+        y1 = int(path[2][point1]) - 50
+        for point2 in loc_maxs_i2:
+            x2 = (start + point2) * window
+            y2 = int(path[2][point2]) - 100
+            intensity = cv.InitLineIterator(cv.fromarray(img3), (x1, y1), (x2, y2))
+            intensity = sum(intensity)
+            if intensity < min_intensity:
+                min_intensity = intensity
+                bestX = x2
+                bestY = y2
+        new_pair = ((x1,y1),(bestX,bestY))
+        pairs.append(new_pair)
+        cv2.line(img2, new_pair[0],new_pair[1], (255,255,255), thickness=5)
+    cv2.namedWindow('img', cv2.WINDOW_NORMAL)
+    cv2.resizeWindow('img', 1500, 1000)
+    cv2.imshow('img', img2)
+    cv2.waitKey(0)
 
 for i in range(1,10):
     img = cv2.imread('_Data/Radiographs/0' + str(i) + '.tif')
     best_path = do_it(img)
-    do_it2(img, best_path)
+    do_it3(img, best_path)
