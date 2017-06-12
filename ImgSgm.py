@@ -161,7 +161,7 @@ def do_it2(img, path):
                 bestY = y2
         new_pair = ((x1,y1),(bestX,bestY))
         pairs.append(new_pair)
-        cv2.line(img2, new_pair[0],new_pair[1], (255,255,255), thickness=5)
+        cv2.line(img2, new_pair[0],new_pair[1], (0,255,255), thickness=5)
     cv2.namedWindow('img', cv2.WINDOW_NORMAL)
     cv2.resizeWindow('img', 1500, 1000)
     cv2.imshow('img', img2)
@@ -185,7 +185,7 @@ def do_it3(img, path):
     for i in range(0,len(path[2])):
         x = (start + i) * window
         y = int(path[2][i])
-        img_vals.append(np.sum(img2[y-100:y-0,x-window:x+window]))
+        img_vals.append(np.sum(img2[y-150:y-0,x-window:x+window]))
     fft = scipy.fftpack.rfft(img_vals)
     fft[30:] = 0
     smoothed = scipy.fftpack.irfft(fft)
@@ -195,7 +195,7 @@ def do_it3(img, path):
     for i in range(0, len(path[2])):
         x = (start + i) * window
         y = int(path[2][i])
-        img_vals.append(np.sum(img2[y-150:y-50, x - window:x + window]))
+        img_vals.append(np.sum(img2[y-225:y-75, x - window:x + window]))
     fft = scipy.fftpack.rfft(img_vals)
     fft[30:] = 0
     smoothed = scipy.fftpack.irfft(fft)
@@ -206,10 +206,10 @@ def do_it3(img, path):
     for point1 in loc_maxs_i1:
         min_intensity = float('inf')
         x1 = (start + point1)*window
-        y1 = int(path[2][point1]) - 50
+        y1 = int(path[2][point1]) - 75
         for point2 in loc_maxs_i2:
             x2 = (start + point2) * window
-            y2 = int(path[2][point2]) - 100
+            y2 = int(path[2][point2]) - 125
             intensity = cv.InitLineIterator(cv.fromarray(img3), (x1, y1), (x2, y2))
             intensity = sum(intensity)
             if intensity < min_intensity:
@@ -219,12 +219,45 @@ def do_it3(img, path):
         new_pair = ((x1,y1),(bestX,bestY))
         pairs.append(new_pair)
         cv2.line(img2, new_pair[0],new_pair[1], (255,255,255), thickness=5)
+
     cv2.namedWindow('img', cv2.WINDOW_NORMAL)
     cv2.resizeWindow('img', 1500, 1000)
     cv2.imshow('img', img2)
     cv2.waitKey(0)
 
+    return pairs
+
+def find_POI(img,pairs):
+    POI = []
+    cPair = pairs[0]
+    i = 1
+    while i < len(pairs) - 1:
+        nPair = pairs[i]
+        if abs(cPair[0][0] - nPair[0][0]) < 25 and abs(cPair[1][0] - nPair[1][0]) < 25:
+            dis1 = sqrt(np.pow(cPair[0][0]-cPair[1][0],2) + np.pow(cPair[0][1]-cPair[1][1],2))
+            dis2 = sqrt(np.pow(nPair[0][0]-nPair[1][0],2) + np.pow(nPair[0][1]-nPair[1][1],2))
+            if dis2 < dis1:
+                cPair = nPair
+        else:
+            x1 = np.min((cPair[0][0],cPair[1][0],nPair[0][0],nPair[1][0]))
+            x2 = np.max((cPair[0][0],cPair[1][0],nPair[0][0],nPair[1][0]))
+            y1 = np.min((cPair[0][1],cPair[1][1],nPair[0][1],nPair[1][1]))
+            y2 = np.max((cPair[0][1],cPair[1][1],nPair[0][1],nPair[1][1]))
+            roI = img[y1:y2,x1:x2]
+            POI.append((int((x1+x2)/2),int((y1+y2)/2)))
+            cPair = nPair
+        i += 1
+    return POI
+
+
 for i in range(1,10):
     img = cv2.imread('_Data/Radiographs/0' + str(i) + '.tif')
     best_path = do_it(img)
-    do_it3(img, best_path)
+    pairs = do_it3(img, best_path)
+    POI = find_POI(img, pairs)
+    for poi in POI:
+        cv2.rectangle(img,poi,(poi[0]+5,poi[1]+5),(0,255,0),thickness =-1)
+    cv2.namedWindow('img', cv2.WINDOW_NORMAL)
+    cv2.resizeWindow('img', 1500, 1000)
+    cv2.imshow('img', img)
+    cv2.waitKey(0)
