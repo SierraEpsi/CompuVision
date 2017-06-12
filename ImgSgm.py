@@ -3,6 +3,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import scipy.fftpack
 import scipy.signal
+import scipy.spatial.distance as spDst
+import scipy.cluster.hierarchy as spHrch
 from scipy.ndimage import morphology
 import cv2
 import cv2.cv as cv
@@ -43,6 +45,27 @@ class JPath:
         fit = np.polyfit(self.pointsX, self.pointsY, 2)
         self.pointsY = np.add(np.multiply(np.power(self.pointsX,2),fit[0]) + np.multiply(self.pointsX,fit[1]), fit[2])
         return [self.start, self.w, self.pointsY]
+
+class TPath:
+    def __init__(self, point):
+        self.points = [point]
+        self.intensity = 0
+
+    def add_best(self, some_points, img):
+        min_intensity = float('inf')
+        best_point = -1
+        index = -1
+        for i in range(0,len(some_points)):
+            point = some_points[i]
+            intensity = cv.InitLineIterator(cv.fromarray(img), self.points[-1], point)
+            if intensity < min_intensity:
+                min_intensity = intensity
+                best_point = point
+                index = i
+        if best_point != -1:
+            self.points.append(best_point)
+            self.intensity += min_intensity
+        return index
 
 def find_jawline(img):
     img = iPP.enhance(img)
@@ -115,48 +138,67 @@ def find_lower_pairs(img, path):
     imgX2 = cv2.flip(imgX2, 1)
     img2 = cv2.addWeighted(imgX1, 0.5, imgX2, 0.5, 0)
 
-    img3 = 255-img2
-
     # lower
-    img_vals = []
-    for i in range(0,len(path[2])):
-        x = (start + i) * window
-        y = int(path[2][i])
-        img_vals.append(np.sum(img2[y+0:y+100,x-window:x+window]))
-    fft = scipy.fftpack.rfft(img_vals)
-    fft[30:] = 0
-    smoothed = scipy.fftpack.irfft(fft)
-    loc_maxs_i1 = scipy.signal.argrelmax(smoothed)[0]
+    w2 = 10
+    points = []
+    for w1 in range (50,160,w2):
+        off1 = w1
+        off2 = w1 + w2
+        img_vals = []
+        for i in range(0,len(path[2])):
+            x = (start + i) * window
+            y = int(path[2][i])
+            img_val = np.sum(img2[y+off1:y+off2,x-window:x+window])
+            img_vals.append(img_val)
+        fft = scipy.fftpack.rfft(img_vals)
+        fft[30:] = 0
+        smoothed = scipy.fftpack.irfft(fft)
+        loc_maxs_i = scipy.signal.argrelmax(smoothed)[0]
+        for point in loc_maxs_i:
+            x1 = (start + point) * window
+            y1 = int(path[2][point]) + w1
+            points.append((x1,y1))
 
-    img_vals = []
-    for i in range(0, len(path[2])):
-        x = (start + i) * window
-        y = int(path[2][i])
-        img_vals.append(np.sum(img2[y + 50:y + 150, x - window:x + window]))
-    fft = scipy.fftpack.rfft(img_vals)
-    fft[30:] = 0
-    smoothed = scipy.fftpack.irfft(fft)
-    loc_maxs_i2 = scipy.signal.argrelmax(smoothed)[0]
+    cv2.namedWindow('img', cv2.WINDOW_NORMAL)
+    cv2.resizeWindow('img', 1500, 1000)
+    cv2.imshow('img', img2)
+    cv2.waitKey(0)
 
-    # match points
-    pairs = []
-    for point1 in loc_maxs_i1:
-        min_intensity = float('inf')
-        x1 = (start + point1)*window
-        y1 = int(path[2][point1]) + 50
-        for point2 in loc_maxs_i2:
-            x2 = (start + point2) * window
-            y2 = int(path[2][point2]) + 100
-            intensity = cv.InitLineIterator(cv.fromarray(img3), (x1, y1), (x2, y2))
-            intensity = sum(intensity)
-            if intensity < min_intensity:
-                min_intensity = intensity
-                bestX = x2
-                bestY = y2
-        new_pair = ((x1,y1),(bestX,bestY))
-        pairs.append(new_pair)
-        cv2.line(img2, new_pair[0],new_pair[1], (0,255,255), thickness=5)
-    return pairs
+
+    paths = []
+    thr = 25
+    for point in points:
+        path404 = True
+        for path in paths:
+            if abs(path[-1][0] - point[0]) < thr:
+                path.append(point)
+                path404 = False
+        if path404:
+            paths.append([point])
+
+    g_paths = []
+    for path in paths:
+        if len(path) > 4:
+            g_paths.append(path)
+
+    POI = []
+    g_paths = sorted(g_paths)
+    cPath = g_paths[0]
+    cY = np.mean(cPath,0)[0]
+    for i in range(1,len(g_paths)-1):
+        nPath = g_paths[i]
+        nY = np.mean(nPath,0)[0]
+        if abs(nY-cY) < 25:
+            pass
+        else:
+            y = int((cY + nY)/2)
+            cPath.extend(nPath)
+            x = int(np.mean(cPath,0)[1])
+            cY = nY
+            cPath = nPath
+            POI.append((y,x))
+
+    return POI
 
 def find_upper_pairs(img, path):
     img = iPP.enhance(img)
@@ -169,48 +211,61 @@ def find_upper_pairs(img, path):
     imgX2 = cv2.flip(imgX2, 1)
     img2 = cv2.addWeighted(imgX1, 0.5, imgX2, 0.5, 0)
 
-    img3 = 255-img2
-
     # lower
-    img_vals = []
-    for i in range(0,len(path[2])):
-        x = (start + i) * window
-        y = int(path[2][i])
-        img_vals.append(np.sum(img2[y-150:y-0,x-window:x+window]))
-    fft = scipy.fftpack.rfft(img_vals)
-    fft[30:] = 0
-    smoothed = scipy.fftpack.irfft(fft)
-    loc_maxs_i1 = scipy.signal.argrelmax(smoothed)[0]
+    w2 = 20
+    points = []
+    for w1 in range (40,200,w2):
+        off1 = w1
+        off2 = w1 + w2
+        img_vals = []
+        for i in range(0,len(path[2])):
+            x = (start + i) * window
+            y = int(path[2][i])
+            img_val = np.sum(img2[y-off2:y-off1,x-window:x+window])
+            img_vals.append(img_val)
+        fft = scipy.fftpack.rfft(img_vals)
+        fft[30:] = 0
+        smoothed = scipy.fftpack.irfft(fft)
+        loc_maxs_i = scipy.signal.argrelmax(smoothed)[0]
+        for point in loc_maxs_i:
+            x1 = (start + point) * window
+            y1 = int(path[2][point]) - w1
+            points.append((x1,y1))
 
-    img_vals = []
-    for i in range(0, len(path[2])):
-        x = (start + i) * window
-        y = int(path[2][i])
-        img_vals.append(np.sum(img2[y-225:y-75, x - window:x + window]))
-    fft = scipy.fftpack.rfft(img_vals)
-    fft[30:] = 0
-    smoothed = scipy.fftpack.irfft(fft)
-    loc_maxs_i2 = scipy.signal.argrelmax(smoothed)[0]
+    paths = []
+    thr = 25
+    for point in points:
+        path404 = True
+        for path in paths:
+            if abs(path[-1][0] - point[0]) < thr:
+                path.append(point)
+                path404 = False
+        if path404:
+            paths.append([point])
 
-    # match points
-    pairs = []
-    for point1 in loc_maxs_i1:
-        min_intensity = float('inf')
-        x1 = (start + point1)*window
-        y1 = int(path[2][point1]) - 75
-        for point2 in loc_maxs_i2:
-            x2 = (start + point2) * window
-            y2 = int(path[2][point2]) - 125
-            intensity = cv.InitLineIterator(cv.fromarray(img3), (x1, y1), (x2, y2))
-            intensity = sum(intensity)
-            if intensity < min_intensity:
-                min_intensity = intensity
-                bestX = x2
-                bestY = y2
-        new_pair = ((x1,y1),(bestX,bestY))
-        pairs.append(new_pair)
-        cv2.line(img2, new_pair[0],new_pair[1], (255,255,255), thickness=5)
-    return pairs
+    g_paths = []
+    for path in paths:
+        if len(path) > 4:
+            g_paths.append(path)
+
+    POI = []
+    g_paths = sorted(g_paths)
+    cPath = g_paths[0]
+    cY = np.mean(cPath,0)[0]
+    for i in range(1,len(g_paths)-1):
+        nPath = g_paths[i]
+        nY = np.mean(nPath,0)[0]
+        if abs(nY-cY) < 25:
+            pass
+        else:
+            y = int((cY + nY)/2)
+            cPath.extend(nPath)
+            x = int(np.mean(cPath,0)[1])
+            cY = nY
+            cPath = nPath
+            POI.append((y,x))
+
+    return POI
 
 def find_POI(img,pairs):
     POI = []
@@ -240,11 +295,8 @@ for i in range(1,10):
     img2 = img.copy()
     best_path = find_jawline(img)
 
-    pairs = find_lower_pairs(img, best_path)
-    POI = find_POI(img, pairs)
-
-    pairs = find_upper_pairs(img, best_path)
-    POI.extend(find_POI(img, pairs))
+    POI = find_lower_pairs(img, best_path)
+    POI.extend(find_upper_pairs(img, best_path))
 
     for poi in POI:
         cv2.rectangle(img2,poi,(poi[0]+5,poi[1]+5),(0,255,0),thickness =-1)
