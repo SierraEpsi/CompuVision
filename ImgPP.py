@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import cv2
 import random
 from ACM import ACM as ACM
+from ASM import ASM as ASM
 
 def enhance(img):
     img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
@@ -31,9 +32,10 @@ def PPimg(img):
     #img = cv2.threshold(img, 30, 256, cv2.THRESH_BINARY)[1]
     t1 = 100
     t2 = 50
-    #img = cv2.Canny(img, t1, t2, apertureSize=3)
+    img = cv2.Canny(img, t1, t2, apertureSize=3)
 
     return img
+
 
 # Used to track mouse
 def getMouseCoord(event, x, y, flags, params):
@@ -46,17 +48,29 @@ def getMouseCoord(event, x, y, flags, params):
             refPt[1] = (x,y)
         else:
             refPt.append((x,y))
+    cv2.namedWindow('img', cv2.WINDOW_NORMAL)
+    cv2.resizeWindow('img', 1500, 1000)
+    cv2.setMouseCallback('img', getMouseCoord)
+    cv2.imshow('img', img)
 
 def selectSqr(img):
     global mouseX, mouseY, refPt
     mouseX = -1
     mouseY = -1
     refPt = []
+    folder = '_Data/landmarks/original/'
+    tooth = 1
+    nbImgs = 14
+    nbDims = 40
+    asm = ASM(folder, nbImgs, nbDims, tooth)
+    model = np.zeros((nbDims, 2))
+    model[:, 0] = asm.mu[:nbDims]
+    model[:, 1] = asm.mu[nbDims:]
 
     cv2.namedWindow('img', cv2.WINDOW_NORMAL)
-    cv2.resizeWindow('img', 1500, 1000)
     cv2.setMouseCallback('img', getMouseCoord)
-    cv2.imshow('img', img)
+    cv2.resizeWindow('img', 1500, 1000)
+    cv2.imshow('img',img)
 
     doClose = False
     while True:
@@ -67,24 +81,46 @@ def selectSqr(img):
             break
         else:
             if mouseX != -1 and mouseY != -1:
-                break
+                b_error = float('inf')
+                b_point = -1
+                for j in range(-50,50,5):
+                    for i in range(-50,50,5):
+                        pnt1, pnt2 = asm.get_search_box((mouseX+i,mouseY+j))
+                        roi = img[pnt1[1]:pnt2[1],pnt1[0]:pnt2[0]]
+                        pntsYX = np.where(roi > 0)  # contains all possible landmarks at estimated location
+                        pntsYX = np.asarray(pntsYX).T
+                        pnts = np.zeros(pntsYX.shape, int)
+                        pnts[:, 0] = pntsYX[:, 1]
+                        pnts[:, 1] = pntsYX[:, 0]
+                        target, error = findClosestPoints(model, pnts, asm)
+                        if error < b_error:
+                            b_error = error
+                            b_point = (i, j)
+                pnt1, pnt2 = asm.get_search_box((mouseX + b_point[0], mouseY + b_point[1]))
+                cv2.rectangle(img,pnt1,pnt2,(100,100,100),thickness=5)
+                cv2.imshow('img',img)
+                print 'found'
+                cv2.waitKey(0)
     if doClose:
         return
 
-    if mouseX != -1 and mouseY != -1:
-        points = [(mouseX+20,mouseY),(mouseX,mouseY+20),(mouseX-20,mouseY),(mouseX,mouseY-20)]
+def findClosestPoints(model, pnts, asm):
+    if len(pnts) < len(model):
+        return None, float('inf')
+    pntsC = asm.center_landmarks(pnts)
+    model = asm.center_landmarks(model)
+    target = np.zeros(model.shape)
 
-        acm = ACM( 1, 1, 50 , img, points)
-        for i in range(0,100 ):
-            n_img = img.copy()
-            acm.greedy_step()
-            points = np.asarray(acm.pts).reshape((-1, 1, 2))
-            cv2.polylines(n_img, [points], True, (255,255,255),thickness=3)
-            cv2.resizeWindow('img', 1500, 1000)
-            cv2.setMouseCallback('img', getMouseCoord)
-            cv2.imshow('img', n_img)
-            cv2.waitKey(0)
-    cv2.waitKey(0)
+    error = 0
+    for m in xrange(len(model)):
+        dif = pntsC - model[m]
+        px = np.power(dif[:, 0], 2)
+        py = np.power(dif[:, 1], 2)
+        d = np.sqrt(px + py)
+        iP = np.argmin(d).astype(np.int32)
+        target[m] = pnts[iP]
+        error += d[iP]
+    return target.astype(int), error
 
 
 if __name__ == '__main__':

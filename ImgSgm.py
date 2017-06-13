@@ -305,3 +305,19 @@ for i in range(1,10):
     cv2.resizeWindow('img', 1500, 1000)
     cv2.imshow('img', img2)
     cv2.waitKey(0)
+
+for i in range(10,15):
+    img = cv2.imread('_Data/Radiographs/' + str(i) + '.tif')
+    img2 = img.copy()
+    best_path = find_jawline(img)
+
+    POI = find_lower_pairs(img, best_path)
+    POI.extend(find_upper_pairs(img, best_path))
+
+    for poi in POI:
+        cv2.rectangle(img2,poi,(poi[0]+5,poi[1]+5),(0,255,0),thickness =-1)
+
+    cv2.namedWindow('img', cv2.WINDOW_NORMAL)
+    cv2.resizeWindow('img', 1500, 1000)
+    cv2.imshow('img', img2)
+    cv2.waitKey(0)

@@ -12,8 +12,8 @@ class ACM:
         self.compute_avg_d()
         self.Et = self.compute_energy()
 
-    def compute_energy(self, pts=-1):
-        if pts == -1:
+    def compute_energy(self, pts=None):
+        if pts == None:
             pts = self.pts
         energy = self.gamma * self.compute_out(pts)
         energy += self.alpha * self.compute_elasticity(pts)
@@ -24,6 +24,7 @@ class ACM:
         Eo = 0
         for point in pts:
             Eo -= self.img[point[1], point[0]]
+        print Eo
         return int(Eo)
 
     def compute_elasticity(self, pts):
@@ -98,7 +99,4 @@ class ACM:
 
     def greedy_step(self):
         ri = random.randint(0,len(self.pts)-1)
-        for i in range(ri,len(self.pts)):
-            self.greedy_search(i,4)
-        for i in range(0,ri):
-            self.greedy_search(i,4)
+        self.greedy_search(ri,4)

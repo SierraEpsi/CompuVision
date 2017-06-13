@@ -118,9 +118,8 @@ class ASM:
         dummy = [0]*choice
         for i in range(-30,40,10):
             n_dummy = dummy
-            n_dummy[3] = i
+            n_dummy[0] = i
             X = self.reconstruct(n_dummy,choice)
-            print X
             X = np.reshape(X,(2,len(X)/2))
             plt.plot(X[0],X[1])
         plt.show()
@@ -185,7 +184,17 @@ class ASM:
         X = X + self.mu
         return X
 
-    def computeModel(self, folderWithLandmarks,toothNbr,nbImgs,nbDims):
+    def get_search_box(self, point):
+        n = len(self.mu)/2
+        x1 = np.min(self.mu[:n])
+        x2 = np.max(self.mu[:n])
+        y1 = np.min(self.mu[n:])
+        y2 = np.max(self.mu[n:])
+        offX = int((x2 - x1)/2)
+        offY = int((y2 - y1)/2)
+        return (point[0] - offX, point[1] - offY),(point[0] + offX, point[1] + offY)
+
+    def computeModel(self, folderWithLandmarks, toothNbr, nbImgs, nbDims):
         X = np.zeros((nbImgs, 2 * nbDims))
         folder = folderWithLandmarks
         SF = []
@@ -229,6 +238,8 @@ if __name__ == '__main__':
     nbDims = 40
     tooth = 1
     active_shape_model = ASM(folder, nbImgs, nbDims, tooth)
+    active_shape_model.get_search_box()
+
     tooth1 = active_shape_model.load_landmarks('_Data/landmarks/original/landmarks2-1.txt')
     tooth2 = active_shape_model.load_landmarks('_Data/landmarks/original/landmarks2-2.txt')
     X, error = active_shape_model.model(tooth1,True)

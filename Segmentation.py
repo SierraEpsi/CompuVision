@@ -6,6 +6,7 @@ import math
 import ImgPP
 from ASM import ASM as ASM
 import matplotlib.pyplot as plt
+from ACM import ACM as ACM
 
 refPt = []
 
@@ -71,8 +72,8 @@ if __name__ == '__main__':
         img = cv2.imread('_Data/Radiographs/02.tif')
        # img = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
 
-        img = ImgPP.PPimg(img)
-        img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR) # Zou al moeten zijn na PPimg
+        img_G = ImgPP.PPimg(img)
+        #img = cv2.cvtColor(img_G, cv2.COLOR_GRAY2BGR)
         
         #path = '_Data/landmarks/original/landmarks1-1.txt'
         #landmarks = ASM.load_landmarks(path)
@@ -152,7 +153,6 @@ if __name__ == '__main__':
 
                 target[:,0] = target[:,0] + x1
                 target[:,1] = target[:,1] + y1
-
 
                 model, Err = ASM.model(target,3)
                 model = np.asarray(model,int).T
