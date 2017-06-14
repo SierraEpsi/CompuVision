@@ -36,6 +36,14 @@ def GRimg2(img):
     abs_grad_y = cv2.convertScaleAbs(sobely)
     return cv2.addWeighted(abs_grad_x, 0.5, abs_grad_y, 0.5, 0)
 
+def GRimgXY(img):
+    sobelx = cv2.Sobel(img, cv2.CV_64F, 1, 0, ksize=3)
+    sobely = cv2.Sobel(img, cv2.CV_64F, 0, 1, ksize=3)
+    gX = cv2.convertScaleAbs(sobelx)
+    gY = cv2.convertScaleAbs(sobely)
+    return gX, gY
+
+
 def PPimg(img):
     img = enhance(img)
 
@@ -190,7 +198,7 @@ def frange(start, stop, step):
 
 if __name__ == '__main__':
     # read an image
-    img = cv2.imread('_Data/Radiographs/01.tif')
+    img = cv2.imread('_Data/Radiographs/05.tif')
     img = enhance2(img)
     img = GRimg2(img)
 

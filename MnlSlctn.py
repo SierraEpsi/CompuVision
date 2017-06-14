@@ -3,12 +3,14 @@ import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 from ASM import ASM as ASM
+from ACM import ACM as ACM
+from Landmarks import Landmarks as LMS
+import ImgPP
 
 tooth = []
 tmpTooth = []
 dragging = False
 start_point = (0, 0)
-
 
 def init(pts, img):
     global tooth
@@ -73,11 +75,43 @@ def mouse_move(x, y, img):
     cv2.imshow('choose', tmp)
 
 if __name__ == '__main__':
-    img = cv2.imread('_Data/Radiographs/01.tif')
+    img = cv2.imread('_Data/Radiographs/02.tif')
+    img2 = img.copy()
+    G_img = ImgPP.enhance2(img)
+    G_img = ImgPP.GRimg2(G_img)
     folder = '_Data/landmarks/original/'
     nbImgs = 14
     nbDims = 40
     tooth = 1
     active_shape_model = ASM(folder, nbImgs, nbDims, tooth)
     pts = active_shape_model.mu
-    print init(pts,img)
+    landmarks = LMS(pts)
+    landmarks = landmarks.scale_to_window(active_shape_model.mW)
+    pts = landmarks.as_matrix().astype('int32')
+    pimg = landmarks.translate(init(pts,img)).as_matrix().astype('int32')
+    while True:
+        acm = ACM(-0.01, -0.1, 5.0, G_img, pimg)
+        diff = -11
+        while diff < -10:
+            diff = acm.greedy_step(5)
+            print diff
+            img3 = cv2.cvtColor(G_img, cv2.COLOR_GRAY2BGR)
+            pimg = np.reshape(acm.pts, (-1, 1, 2))
+            cv2.polylines(img3, [pimg], True, (0, 0, 256), thickness=5)
+            cv2.namedWindow('choose', cv2.WINDOW_NORMAL)
+            cv2.resizeWindow('choose', 1200, 800)
+            cv2.imshow('choose', img3)
+            cv2.waitKey(0)
+        Tx, Ty, sf, angle, b = active_shape_model.estimate_trans(acm.pts)
+        print b
+        cX = LMS(acm.pts).get_centroid()
+        pts = LMS(active_shape_model.reconstruct(b))
+        pimg = pts.T([Tx,Ty],sf,angle).translate(cX).as_matrix().astype('int32')
+
+        img3 = cv2.cvtColor(G_img, cv2.COLOR_GRAY2BGR)
+        pts = np.reshape(pimg, (-1, 1, 2))
+        cv2.polylines(img3, [pts], True, (0, 0, 256), thickness=5)
+        cv2.namedWindow('choose', cv2.WINDOW_NORMAL)
+        cv2.resizeWindow('choose', 1200, 800)
+        cv2.imshow('choose', img3)
+        cv2.waitKey(0)

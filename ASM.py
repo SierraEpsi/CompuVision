@@ -20,10 +20,8 @@ class ASM:
     def __init__(self, folder_path, nbImgs, nbDims, tooth, doPlot = False):
         self.mu = None
         self.eV = None
-        self.eW = None
+        self.mW = [0,0]
 
-        self.eVr = None
-        self.sF = None
         self.computeModel2(folder_path,tooth,nbImgs,nbDims, doPlot)
 
     def computeModel(self, folder_path, toothNbr, nbImgs, nbDims, doPlot = False):
@@ -72,8 +70,8 @@ class ASM:
                 plt.plot(pts[:nbDims],pts[nbDims:])
             plt.show()
 
-        _,eV = self.pca(X)
-        self.mu = np.mean(X, axis=0)
+        mu,eV = self.pca(X)
+        self.mu = mu
         self.eV = eV
 
     def computeModel2(self, folder_path, toothNbr, nbImgs, nbDims, doPlot=False):
@@ -81,7 +79,11 @@ class ASM:
         for i in range(1, nbImgs + 1):
             path = folder_path + 'landmarks' + str(i) + '-' + str(toothNbr) + '.txt'
             landmark = Landmarks(path)
+            w, h = landmark.get_dimensions()
+            self.mW[0] += w
+            self.mW[1] += h
             all_landmarks.append(landmark.translate_to_origin())
+        self.mW = np.divide(self.mW ,len(all_landmarks))
 
         mu = all_landmarks[0].scale_to_unit()
         x0 = mu
@@ -114,6 +116,25 @@ class ASM:
         _,pcm = self.pca(X)
         self.mu = mu.as_vector()
         self.eV = pcm
+
+    def align_param(self, x1, x2):
+        c1 = x1.get_centroid()
+        c2 = x2.get_centroid()
+        x1 = x1.translate_to_origin()
+        x2 = x2.translate_to_origin()
+
+        x1V = x1.as_vector()
+        x2V = x2.as_vector()
+        n = len(x1V) / 2
+
+        nX = (la.norm(x2V) ** 2)
+        a = np.dot(x1V, x2V) / nX
+        b = (np.dot(x2V[:n], x1V[n:]) - np.dot(x2V[n:], x1V[:n])) / nX
+
+        sf = np.sqrt(a ** 2 + b ** 2)
+        angle = np.arctan(b / a)
+        t = c1 - c2
+        return t, sf, angle
 
     def align_shape(self, x1,x2):
         x1V = x1.as_vector()
@@ -272,7 +293,6 @@ class ASM:
     def project(self, X):
         Y = np.subtract(X ,self.mu)
         Y = np.dot(Y,self.eV)
-        # clip Y
         return Y
 
     def reconstruct(self, Y, n=None):
@@ -289,6 +309,36 @@ class ASM:
         y2 = np.max(self.mu[n:])
         off = np.max((int((x2 - x1)/2),int((y2 - y1)/2)))
         return (point[0] - off, point[1] - off),(point[0] + off, point[1] + off)
+
+    def estimate_trans(self, pts):
+        y = Landmarks(pts).translate_to_origin()
+        b = np.zeros(self.eV.shape[1])
+        diff = 1
+        Tx = 0
+        Ty = 0
+        tsf = 1.0
+        tAngle = 0
+        while diff > 1e-15:
+            x = Landmarks(self.reconstruct(b))
+            t,sf,angle = self.align_param(y,x)
+
+            Tx += t[0]
+            Ty += t[1]
+            tsf *= sf
+            tAngle += angle
+
+            y = y.invT(t,sf,angle)
+            xV = x.as_vector()
+            yV = y.as_vector()
+            xx = np.dot(xV, yV)
+            yT = Landmarks(yV * (1.0 / xx))
+            nb = self.project(yT.as_vector())
+            b = nb
+            diff = np.sum(abs(b-nb))
+
+        return Tx, Ty, tsf, tAngle, b
+
+
 
 # test it
 if __name__ == '__main__':

@@ -77,4 +77,15 @@ class Landmarks(object):
         return self.rotate(theta).scale(s).translate(t)
 
     def invT(self, t, s, theta):
-        return self.translate(-t).scale(1/s).rotate(-theta)
+        t = np.multiply(t,-1)
+        return self.translate(t).scale(1/s).rotate(-theta)
+
+    def get_dimensions(self):
+        h = self.pts[:, 1].max() - self.pts[:, 1].min()
+        w = self.pts[:, 0].max() - self.pts[:, 0].min()
+        return (w,h)
+
+    def scale_to_window(self, window):
+        h = window[1]
+        sf = h / (self.pts[:, 1].max() - self.pts[:, 1].min())
+        return self.scale(sf)

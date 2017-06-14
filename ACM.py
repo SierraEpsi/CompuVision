@@ -17,21 +17,31 @@ class ACM:
             pts = self.pts
         energy = self.gamma * self.compute_out(pts)
         energy += self.alpha * self.compute_elasticity(pts)
-        energy += self.alpha * self.compute_curvature(pts)
+        energy += self.beta * self.compute_curvature(pts)
         return energy
 
     def compute_out(self, pts):
         Eo = 0
         for point in pts:
-            Eo -= self.img[point[1], point[0]]
-        print Eo
+            Eo -= self.c_out(point)
         return int(Eo)
+
+    def c_out(self,pt):
+        g_w = [[1,4,1],
+               [4,7,4],
+               [1,4,1]]
+        img_window = self.img[pt[1]-1:pt[1]+2,pt[0]-1:pt[0]+2].copy()
+        temp = np.multiply(img_window,g_w)
+        temp = np.sum(temp)
+        temp = temp/27.0
+        temp = np.power(temp,2)
+        return temp
+
 
     def compute_elasticity(self, pts):
         Ee = self.c_elas(pts[-1],pts[0])
         for i in range(0, len(pts) - 1):
             Ee += self.c_elas(pts[i],pts[i+1])
-        Ee = np.sqrt(Ee)
         return int(Ee)
 
     def c_elas(self, pt0, pt1):
@@ -47,7 +57,6 @@ class ACM:
         Ec += self.c_curv(pts[-1],pts[0],pts[1])
         for i in range(1,len(pts)-1):
             Ec += self.c_curv(pts[i-1],pts[i],pts[i+1])
-        Ec = np.sqrt(Ec)
         return int(Ec)
 
     def c_curv(self, pt0, pt1, pt2):
@@ -72,13 +81,27 @@ class ACM:
         temp = np.sqrt(temp)
         return temp
 
-    def compare_diff(self, i, np):
-        pts = self.pts
+    def compare_diff(self, i, nP):
+        if i == len(self.pts)-1:
+            i = -1
+        elif i == len(self.pts)-2:
+            i = -2
 
-        n_pts = pts
-        n_pts[i] = np
-        nEt = self.compute_energy(n_pts)
-        return nEt - self.Et
+        Eo = self.c_out(self.pts[i])
+        Eo -= self.c_out(nP)
+
+        Ee = self.c_elas(self.pts[i-1],self.pts[i])
+        Ee += self.c_elas(self.pts[i],self.pts[i+1])
+        Ee -= self.c_elas(self.pts[i-1],nP)
+        Ee -= self.c_elas(nP,self.pts[i+1])
+
+        Ec = self.c_curv(self.pts[i-2],self.pts[i-1],self.pts[i])
+        Ec += self.c_curv(self.pts[i-1],self.pts[i],self.pts[i+1])
+        Ec += self.c_curv(self.pts[i],self.pts[i+1],self.pts[i+2])
+        Ec -= self.c_curv(self.pts[i-2],self.pts[i-1],nP)
+        Ec -= self.c_curv(self.pts[i-1],nP,self.pts[i+1])
+        Ec -= self.c_curv(nP,self.pts[i+1],self.pts[i+2])
+        return self.gamma*Eo - self.alpha*Ee - self.beta*Ec
 
     def greedy_search(self, i, dis=2):
         best_gain = 0
@@ -88,15 +111,19 @@ class ACM:
             for y in range(point[1]-dis,point[1]+dis+1):
                 if x != point[0] and y != point[0]:
                     np = (x,y)
-                    gain = self.compare_diff(i, np)
+                    gain = -self.compare_diff(i, np)
                     if gain < best_gain:
                         best_gain = gain
                         best_point = np
         if best_point != -1:
             self.pts[i] = best_point
-            self.Et -= gain
+            self.Et += gain
             self.compute_avg_d()
+        return best_gain
 
-    def greedy_step(self):
-        ri = random.randint(0,len(self.pts)-1)
-        self.greedy_search(ri,4)
+    def greedy_step(self, dis=2):
+        order = random.sample(range(0,len(self.pts)), len(self.pts))
+        gain = 0
+        for i in range(0,len(self.pts)):
+            gain += self.greedy_search(order[i],dis)
+        return gain
