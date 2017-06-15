@@ -34,7 +34,11 @@ def GRimg2(img):
     sobely = cv2.Sobel(img, cv2.CV_64F, 0, 1, ksize=3)
     abs_grad_x = cv2.convertScaleAbs(sobelx)
     abs_grad_y = cv2.convertScaleAbs(sobely)
-    return cv2.addWeighted(abs_grad_x, 0.5, abs_grad_y, 0.5, 0)
+    img = cv2.addWeighted(abs_grad_x, 0.5, abs_grad_y, 0.5, 0)
+    clahe = cv2.createCLAHE(clipLimit=1.5, tileGridSize=(25, 25))
+    img = clahe.apply(img)
+    img = cv2.threshold(img, 75, 256, cv2.THRESH_TOZERO)[1]
+    return img
 
 def GRimgXY(img):
     sobelx = cv2.Sobel(img, cv2.CV_64F, 1, 0, ksize=3)

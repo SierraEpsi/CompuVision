@@ -8,6 +8,7 @@ import scipy.cluster.hierarchy as spHrch
 from scipy.ndimage import morphology
 import cv2
 import cv2.cv as cv
+from TthMdl import ToothModel as TML
 
 class JPath:
     def __init__(self, point, index, w=25):
@@ -97,19 +98,20 @@ def find_jawline(img):
         loc_maxs = []
         for max_i in loc_maxs_i:
             loc_maxs.append(smoothed[max_i])
-        _, loc_maxs_i = zip(*sorted(zip(loc_maxs, loc_maxs_i),reverse=True))
+        if len(loc_maxs) > 0:
+            _, loc_maxs_i = zip(*sorted(zip(loc_maxs, loc_maxs_i),reverse=True))
 
-        # keep best 3 with a minimal distance
-        best_n = [offset + loc_maxs_i[0]]
-        count = 1
-        for i in range(1,len(loc_maxs_i)):
-            max_i = loc_maxs_i[i]
-            if all(abs(max_i - other_i) > 150 for other_i in best_n):
-                best_n.append(offset + max_i)
-                count += 1
-                if count == 3:
-                    break
-        pot_jaw_pts.append(best_n)
+            # keep best 3 with a minimal distance
+            best_n = [offset + loc_maxs_i[0]]
+            count = 1
+            for i in range(1,len(loc_maxs_i)):
+                max_i = loc_maxs_i[i]
+                if all(abs(max_i - other_i) > 150 for other_i in best_n):
+                    best_n.append(offset + max_i)
+                    count += 1
+                    if count == 3:
+                        break
+            pot_jaw_pts.append(best_n)
 
     paths = []
     for best_i in pot_jaw_pts[int(0.35*len(pot_jaw_pts))]:
@@ -158,12 +160,6 @@ def find_lower_pairs(img, path):
             x1 = (start + point) * window
             y1 = int(path[2][point]) + w1
             points.append((x1,y1))
-
-    cv2.namedWindow('img', cv2.WINDOW_NORMAL)
-    cv2.resizeWindow('img', 1500, 1000)
-    cv2.imshow('img', img2)
-    cv2.waitKey(0)
-
 
     paths = []
     thr = 25
@@ -267,6 +263,18 @@ def find_upper_pairs(img, path):
 
     return POI
 
+def refine_POI(pois, img, k=10):
+    img = iPP.enhance2(img)
+    print 'start'
+    for poi in pois:
+        P00 = poi[0] - k
+        P01 = poi[0] + k + 1
+        P10 = poi[1] - k
+        P11 = poi[1] + k + 1
+        img_window = img[P10:P11,P00:P01]
+        img_val = np.sqrt(np.sum(np.power(img_window,2)))
+        print img_val
+
 def find_POI(img,pairs):
     POI = []
     cPair = pairs[0]
@@ -290,34 +298,57 @@ def find_POI(img,pairs):
     return POI
 
 
-for i in range(1,10):
-    img = cv2.imread('_Data/Radiographs/0' + str(i) + '.tif')
+def test1():
+    for i in range(1, 10):
+        img = cv2.imread('_Data/Radiographs/0' + str(i) + '.tif')
+        img2 = img.copy()
+        best_path = find_jawline(img)
+
+        POIL = find_lower_pairs(img, best_path)
+        POIU = find_upper_pairs(img, best_path)
+
+        refine_POI(POIU,img)
+        for poi in POIU:
+            cv2.rectangle(img2, poi, (poi[0] + 5, poi[1] + 5), (0, 255, 0), thickness=-1)
+
+        cv2.namedWindow('img', cv2.WINDOW_NORMAL)
+        cv2.resizeWindow('img', 1500, 1000)
+        cv2.imshow('img', img2)
+        cv2.waitKey(0)
+    for i in range(10, 15):
+        img = cv2.imread('_Data/Radiographs/' + str(i) + '.tif')
+        img2 = img.copy()
+        best_path = find_jawline(img)
+
+        POI = find_lower_pairs(img, best_path)
+        POI.extend(find_upper_pairs(img, best_path))
+
+        for poi in POI:
+            cv2.rectangle(img2, poi, (poi[0] + 5, poi[1] + 5), (0, 255, 0), thickness=-1)
+
+        cv2.namedWindow('img', cv2.WINDOW_NORMAL)
+        cv2.resizeWindow('img', 1500, 1000)
+        cv2.imshow('img', img2)
+        cv2.waitKey(0)
+
+
+
+
+if __name__ == '__main__':
+    img = cv2.imread('_Data/Radiographs/01.tif')
     img2 = img.copy()
+    G_IMG = iPP.enhance2(img)
     best_path = find_jawline(img)
-
-    POI = find_lower_pairs(img, best_path)
-    POI.extend(find_upper_pairs(img, best_path))
-
-    for poi in POI:
-        cv2.rectangle(img2,poi,(poi[0]+5,poi[1]+5),(0,255,0),thickness =-1)
-
-    cv2.namedWindow('img', cv2.WINDOW_NORMAL)
-    cv2.resizeWindow('img', 1500, 1000)
-    cv2.imshow('img', img2)
-    cv2.waitKey(0)
-
-for i in range(10,15):
-    img = cv2.imread('_Data/Radiographs/' + str(i) + '.tif')
-    img2 = img.copy()
-    best_path = find_jawline(img)
-
-    POI = find_lower_pairs(img, best_path)
-    POI.extend(find_upper_pairs(img, best_path))
-
-    for poi in POI:
-        cv2.rectangle(img2,poi,(poi[0]+5,poi[1]+5),(0,255,0),thickness =-1)
-
-    cv2.namedWindow('img', cv2.WINDOW_NORMAL)
-    cv2.resizeWindow('img', 1500, 1000)
-    cv2.imshow('img', img2)
-    cv2.waitKey(0)
+#
+    POIL = find_lower_pairs(img, best_path)
+    POIU = find_upper_pairs(img, best_path)
+#
+    print 'done 1'
+#
+    img_path = '_Data/Radiographs/'
+    lmk_path = '_Data/Landmarks/original/landmarks'
+    tModel = TML(img_path,lmk_path,4)
+#
+    print 'done 2'
+#
+    tModel.find_best_match(G_IMG,POIU)

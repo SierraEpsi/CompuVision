@@ -318,7 +318,7 @@ class ASM:
         Ty = 0
         tsf = 1.0
         tAngle = 0
-        while diff > 1e-15:
+        while diff > 1e-20:
             x = Landmarks(self.reconstruct(b))
             t,sf,angle = self.align_param(y,x)
 
@@ -335,8 +335,11 @@ class ASM:
             nb = self.project(yT.as_vector())
             b = nb
             diff = np.sum(abs(b-nb))
-
-        return Tx, Ty, tsf, tAngle, b
+            plt.plot(x.as_matrix()[:,0],x.as_matrix()[:,1])
+            plt.plot(yT.as_matrix()[:,0],yT.as_matrix()[:,1])
+            plt.show()
+        _, error = self.model(y)
+        return Tx, Ty, tsf, tAngle, b, error
 
 
 

@@ -6,7 +6,7 @@ class ACM:
         self.alpha = alpha
         self.beta = beta
         self.gamma = gamma
-        self.img = img.copy()
+        self.img = img
         self.pts = pts
         self.avg_dis = -1
         self.compute_avg_d()
@@ -30,12 +30,13 @@ class ACM:
         g_w = [[1,4,1],
                [4,7,4],
                [1,4,1]]
-        img_window = self.img[pt[1]-1:pt[1]+2,pt[0]-1:pt[0]+2].copy()
-        temp = np.multiply(img_window,g_w)
-        temp = np.sum(temp)
-        temp = temp/27.0
-        temp = np.power(temp,2)
-        return temp
+        img = self.img
+        img_window = img[pt[1]-1:pt[1]+2,pt[0]-1:pt[0]+2].copy()
+        temp1 = np.multiply(img_window,g_w)
+        temp1 = np.sum(temp1)
+        temp1 = temp1/27.0
+        temp1 = np.power(temp1,2)
+        return temp1
 
 
     def compute_elasticity(self, pts):

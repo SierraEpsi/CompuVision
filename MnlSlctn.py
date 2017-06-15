@@ -83,16 +83,19 @@ if __name__ == '__main__':
     nbImgs = 14
     nbDims = 40
     tooth = 1
-    active_shape_model = ASM(folder, nbImgs, nbDims, tooth)
-    pts = active_shape_model.mu
+    asm1 = ASM(folder, nbImgs, nbDims, 1)
+    asm2 = ASM(folder, nbImgs, nbDims, 2)
+    asm3 = ASM(folder, nbImgs, nbDims, 3)
+    asm4 = ASM(folder, nbImgs, nbDims, 4)
+    pts = asm1.mu
     landmarks = LMS(pts)
-    landmarks = landmarks.scale_to_window(active_shape_model.mW)
+    landmarks = landmarks.scale_to_window(asm1.mW)
     pts = landmarks.as_matrix().astype('int32')
     pimg = landmarks.translate(init(pts,img)).as_matrix().astype('int32')
     while True:
-        acm = ACM(-0.01, -0.1, 5.0, G_img, pimg)
+        acm = ACM(-0.01, -0.1, 25.0, G_img, pimg)
         diff = -11
-        while diff < -10:
+        while diff < -150:
             diff = acm.greedy_step(5)
             print diff
             img3 = cv2.cvtColor(G_img, cv2.COLOR_GRAY2BGR)
@@ -102,10 +105,16 @@ if __name__ == '__main__':
             cv2.resizeWindow('choose', 1200, 800)
             cv2.imshow('choose', img3)
             cv2.waitKey(0)
-        Tx, Ty, sf, angle, b = active_shape_model.estimate_trans(acm.pts)
-        print b
+        Tx, Ty, sf, angle, b, error = asm1.estimate_trans(acm.pts)
+        print error
+        _, _, _, _, _, error = asm2.estimate_trans(acm.pts)
+        print error
+        _, _, _, _, _, error = asm3.estimate_trans(acm.pts)
+        print error
+        _, _, _, _, _, error = asm4.estimate_trans(acm.pts)
+        print error
         cX = LMS(acm.pts).get_centroid()
-        pts = LMS(active_shape_model.reconstruct(b))
+        pts = LMS(asm1.reconstruct(b))
         pimg = pts.T([Tx,Ty],sf,angle).translate(cX).as_matrix().astype('int32')
 
         img3 = cv2.cvtColor(G_img, cv2.COLOR_GRAY2BGR)

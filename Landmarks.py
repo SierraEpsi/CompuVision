@@ -83,7 +83,12 @@ class Landmarks(object):
     def get_dimensions(self):
         h = self.pts[:, 1].max() - self.pts[:, 1].min()
         w = self.pts[:, 0].max() - self.pts[:, 0].min()
-        return (w,h)
+        return w, h
+
+    def get_window(self):
+        X0,Y0 = np.min(self.pts,0)
+        X1,Y1 = np.max(self.pts,0)
+        return (int(X0),int(Y0)),(int(X1),int(Y1))
 
     def scale_to_window(self, window):
         h = window[1]
