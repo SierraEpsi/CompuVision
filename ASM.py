@@ -190,23 +190,34 @@ class ASM:
         array[:,1] = y
         return Landmarks(array), scale_factor
 
-    def pca(self, X):
-        mu = np.average(X, axis=0)
-        X = np.subtract(X, mu.transpose())
+    def pca(self, teeth):
+        mu = np.mean(teeth, axis=0)
+        teeth = np.subtract(teeth, mu)
+        T = np.transpose(teeth)
+        tt = np.dot(np.transpose(T), T)
+        tt = np.divide(tt,tt.shape[0])
 
-        eW, eV = np.linalg.eig(np.dot(X, np.transpose(X)))
-        eV = np.dot(np.transpose(X), eV)
+        eW, eU = la.eig(tt)
+        eV = np.dot(T, eU)
+        idx = eW.argsort()[::-1]
+        eW = eW[idx]
+        eV = eV[:, idx]
+        norms = la.norm(eV, axis=0)
+        eV = eV / norms
+        eW = eW / norms
 
-        eig = zip(eW, np.transpose(eV))
-        eig = map(lambda x: (x[0] * np.linalg.norm(x[1]),
-                             x[1] / np.linalg.norm(x[1])), eig)
-
-        eig = sorted(eig, reverse=True, key=lambda x: abs(x[0]))
-        print eig
-        eig = eig[:8]
-
-        eW, eV = map(np.array, zip(*eig))
-        return mu, eV
+        tSum = np.sum(abs(eW))
+        pSum = np.cumsum(abs(eW))
+        choice = -1
+        for i in range(0,len(pSum)):
+            if pSum[i]/tSum > 0.99:
+                choice = i
+                break
+        pcm = []
+        for i in range(0, 8):
+           pcm.append(eW[i] * eV[:,i])
+        pcm = np.array(pcm).squeeze().transpose()
+        return mu, pcm
 
     def pca2(self, teeth):
         S = np.cov(teeth, rowvar=0)

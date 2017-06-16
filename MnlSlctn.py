@@ -82,7 +82,7 @@ if __name__ == '__main__':
     folder = '_Data/landmarks/original/'
     nbImgs = 14
     nbDims = 40
-    tooth = 1
+    tooth = 4
     asm = ASM(folder, nbImgs, nbDims, 1)
     pts = asm.mu
     landmarks = LMS(pts)
