@@ -75,7 +75,7 @@ def mouse_move(x, y, img):
     cv2.imshow('choose', tmp)
 
 if __name__ == '__main__':
-    img = cv2.imread('_Data/Radiographs/02.tif')
+    img = cv2.imread('_Data/Radiographs/05.tif')
     img2 = img.copy()
     G_img = ImgPP.enhance2(img)
     G_img = ImgPP.GRimg2(G_img)
@@ -83,18 +83,15 @@ if __name__ == '__main__':
     nbImgs = 14
     nbDims = 40
     tooth = 1
-    asm1 = ASM(folder, nbImgs, nbDims, 1)
-    asm2 = ASM(folder, nbImgs, nbDims, 2)
-    asm3 = ASM(folder, nbImgs, nbDims, 3)
-    asm4 = ASM(folder, nbImgs, nbDims, 4)
-    pts = asm1.mu
+    asm = ASM(folder, nbImgs, nbDims, 1)
+    pts = asm.mu
     landmarks = LMS(pts)
-    landmarks = landmarks.scale_to_window(asm1.mW)
+    landmarks = landmarks.scale_to_window(asm.mW)
     pts = landmarks.as_matrix().astype('int32')
     pimg = landmarks.translate(init(pts,img)).as_matrix().astype('int32')
     while True:
         acm = ACM(-0.01, -0.1, 25.0, G_img, pimg)
-        diff = -11
+        diff = -151
         while diff < -150:
             diff = acm.greedy_step(5)
             print diff
@@ -105,16 +102,9 @@ if __name__ == '__main__':
             cv2.resizeWindow('choose', 1200, 800)
             cv2.imshow('choose', img3)
             cv2.waitKey(0)
-        Tx, Ty, sf, angle, b, error = asm1.estimate_trans(acm.pts)
-        print error
-        _, _, _, _, _, error = asm2.estimate_trans(acm.pts)
-        print error
-        _, _, _, _, _, error = asm3.estimate_trans(acm.pts)
-        print error
-        _, _, _, _, _, error = asm4.estimate_trans(acm.pts)
-        print error
+        Tx, Ty, sf, angle, b, error = asm.estimate_trans(acm.pts)
         cX = LMS(acm.pts).get_centroid()
-        pts = LMS(asm1.reconstruct(b))
+        pts = LMS(asm.reconstruct(b))
         pimg = pts.T([Tx,Ty],sf,angle).translate(cX).as_matrix().astype('int32')
 
         img3 = cv2.cvtColor(G_img, cv2.COLOR_GRAY2BGR)
