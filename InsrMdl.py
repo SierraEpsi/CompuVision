@@ -131,7 +131,7 @@ if __name__ == '__main__':
     from ImgSgm import find_POI
     import ImgPP as iPP
 
-    for id in range(1,9):
+    for id in range(1,10):
         img = cv2.imread('_Data/Radiographs/0' + str(id) + '.tif')
         img2 = img.copy()
         G_IMG = iPP.enhance2(img)

@@ -147,9 +147,9 @@ def find_POI(img, window, isUp):
     # search for some points
     if isUp:
         rU = h
-        rD = int(0.5*h)
+        rD = int(0.6*h)
     else:
-        rU = int(0.5*h)
+        rU = int(0.6*h)
         rD = w1
 
     for i1 in range (rD,rU,w1):
@@ -162,68 +162,42 @@ def find_POI(img, window, isUp):
         smoothed = scipy.fftpack.irfft(fft)
 
         loc_maxs_i = scipy.signal.argrelmax(smoothed)[0]
-        loc_maxs = []
-        for max_i in loc_maxs_i:
-            loc_maxs.append(smoothed[max_i])
 
-        if len(loc_maxs) > 0:
-            if len(loc_maxs) < 3:
-                n = len(loc_maxs)
-            else:
-                n = 3
-            _, loc_maxs_i = zip(*sorted(zip(loc_maxs, loc_maxs_i), reverse=True))
-            loc_maxs_i = loc_maxs_i[:n]
-            for point in loc_maxs_i:
-                x1 = point*w2
-                y1 = i1
-                if x1 > 25 and x1 < w-25:
-                    points.append((x1,y1))
+        for point in loc_maxs_i:
+            x1 = (1+point)*w2
+            y1 = i1
+            points.append((x1, y1))
 
-    # make paths of these points
-    paths = []
-    thr = 2 * w2
+    # group
+    wg1 = int(0.125*w)
+    wg2 = int(0.375*w)
+    wg3 = int(0.625*w)
+    wg4 = int(0.875*w)
+    g1 = []
+    g2 = []
+    g3 = []
     for point in points:
-        path404 = True
-        for path in paths:
-            if abs(path[-1][0] - point[0]) < thr and path[-1][1] != point[1]:
-                path.append(point)
-                path404 = False
-        if path404:
-            paths.append([point])
+        if point[0] > wg1 and point[0] < wg2:
+            g1.append(point[0])
+        elif point[0] > wg2 and point[0] < wg3:
+            g2.append(point[0])
+        elif point[0] > wg3 and point[0] < wg4:
+            g3.append(point[0])
 
-    # keep the 5 longest paths
-    l_paths = []
-    for path in paths:
-        l_paths.append(len(path))
-    g_paths = paths[:5]
+    g1 = int(np.mean(g1))
+    g2 = int(np.mean(g2))
+    g3 = int(np.mean(g3))
 
-    # extract the POI with the path
-    POI = []
-    g_paths = sorted(g_paths)
-    cX = 0
-    tX = 0
-    splits = []
-    count = 1
-    for i in range(0,len(g_paths)):
-        nPath = g_paths[i]
-        nX = np.mean(nPath,0)[0]
-        if abs(nX-cX) < 25:
-            cX = nX
-            tX += nX
-            count += 1
-        else:
-            splits.append(tX/count)
-            cX = nX
-            tX = nX
-            count = 1
-    if abs(w - cX) > 25:
-            splits.append(tX/count)
-    splits.append(w)
 
-    for i in range(0,len(splits)-1):
-            x = int((splits[i] + splits[i+1])/2)
-            y = int(h/2)
-            POI.append((x,y))
+    img3 = img_w.copy()
+    cv2.line(img3,(g1,0),(g1,h),(255,0,0),thickness=2)
+    cv2.line(img3,(g2,0),(g2,h),(255,0,0),thickness=2)
+    cv2.line(img3,(g3,0),(g3,h),(255,0,0),thickness=2)
+
+    cv2.imshow('img',img3)
+    cv2.waitKey(0)
+
+    POI = [int((0+g1)/2),int((g1+g2)/2),int((g2+g3)/2),int((g3+w)/2)]
 
     # find the top of the tooth
     imgY1 = cv2.Scharr(img_w,-1,0,1)
@@ -231,9 +205,9 @@ def find_POI(img, window, isUp):
     imgY2 = cv2.flip(imgY2,0)
     img2 = cv2.addWeighted(imgY1, 0.5, imgY2, 0.5, 0)
     POI2 = []
-    for poi in POI:
+
+    for x in POI:
         vals = []
-        x = poi[0]
         for i1 in range(w1, h, w1):
             val = np.sum(img2[i1 - int(w1 / 2):i1 + int(w1 / 2), x - int(w2 / 2):x + int(w2 / 2)])
             vals.append(val)
@@ -254,30 +228,7 @@ def find_POI(img, window, isUp):
             y = int(0.33*i_max*w1)
             POI2.append((x,y))
 
-    while len(POI2) > 4:
-        POI = POI2
-        s_dis = float('inf')
-        r_i = -1
-        for i in range(0,len(POI)-1):
-            dis = abs(POI2[i][0] - POI2[i+1][0])
-            if dis < s_dis:
-                s_dis = dis
-                r_i = i
-
-        POI2 = []
-        for i in range(0,len(POI)):
-            if i == r_i:
-                POI2.append((int((POI[i][0]+POI[i+1][0])/2),int((POI[i][1]+POI[i+1][1])/2)))
-            elif i != r_i+1:
-                POI2.append(POI[i])
-
-    POI = []
-    for i in range (0,len(POI2)):
-        x = POI2[i][0]
-        y = POI2[i][1]
-        POI.append((x,y))
-
-    return POI
+    return POI2
 
 def find_upper_pairs(img, path):
     img = iPP.enhance(img)

@@ -341,8 +341,6 @@ class ASM:
         _, error = self.model(y)
         return Tx, Ty, tsf, tAngle, b, error
 
-
-
 # test it
 if __name__ == '__main__':
     # load all set of landmarks for first tooth
