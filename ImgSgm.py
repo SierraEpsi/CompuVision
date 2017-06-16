@@ -129,72 +129,168 @@ def find_jawline(img):
 
     return best_path.return_path()
 
-def find_lower_pairs(img, path):
+def find_POI(img, window, isUp):
     img = iPP.enhance(img)
-    h,w = img.shape
-    start = path[0]
-    window = path[1]
 
-    imgX1 = cv2.Scharr(img, -1, 1, 0)
-    imgX2 = cv2.Scharr(cv2.flip(img, 1), -1, 1, 0)
+    img_w = img[window[0][1]:window[1][1], window[0][0]:window[1][0]].copy()
+
+    imgX1 = cv2.Scharr(img_w, -1, 1, 0)
+    imgX2 = cv2.Scharr(cv2.flip(img_w, 1), -1, 1, 0)
     imgX2 = cv2.flip(imgX2, 1)
     img2 = cv2.addWeighted(imgX1, 0.5, imgX2, 0.5, 0)
+    h, w = img2.shape
 
-    # lower
-    w2 = 10
+    w1 = int(h/25)
+    w2 = int(w/50)
     points = []
-    for w1 in range (50,160,w2):
-        off1 = w1
-        off2 = w1 + w2
-        img_vals = []
-        for i in range(0,len(path[2])):
-            x = (start + i) * window
-            y = int(path[2][i])
-            img_val = np.sum(img2[y+off1:y+off2,x-window:x+window])
-            img_vals.append(img_val)
-        fft = scipy.fftpack.rfft(img_vals)
+    img_w2 = img_w.copy()
+    # search for some points
+    if isUp:
+        rU = h
+        rD = int(0.5*h)
+    else:
+        rU = int(0.5*h)
+        rD = w1
+
+    for i1 in range (rD,rU,w1):
+        vals = []
+        for i2 in range(w2,w,w2):
+            val = np.sum(img2[i1-int(w1/2):i1+int(w1/2),i2-int(w2/2):i2+int(w2/2)])
+            vals.append(val)
+        fft = scipy.fftpack.rfft(vals)
         fft[30:] = 0
         smoothed = scipy.fftpack.irfft(fft)
-        loc_maxs_i = scipy.signal.argrelmax(smoothed)[0]
-        for point in loc_maxs_i:
-            x1 = (start + point) * window
-            y1 = int(path[2][point]) + w1
-            points.append((x1,y1))
 
+        loc_maxs_i = scipy.signal.argrelmax(smoothed)[0]
+        loc_maxs = []
+        for max_i in loc_maxs_i:
+            loc_maxs.append(smoothed[max_i])
+
+        if len(loc_maxs) > 0:
+            if len(loc_maxs) < 3:
+                n = len(loc_maxs)
+            else:
+                n = 3
+            _, loc_maxs_i = zip(*sorted(zip(loc_maxs, loc_maxs_i), reverse=True))
+            loc_maxs_i = loc_maxs_i[:n]
+            for point in loc_maxs_i:
+                x1 = point*w2
+                y1 = i1
+                if x1 > 25 and x1 < w-25:
+                    points.append((x1,y1))
+                    cv2.rectangle(img_w2,(x1,y1),(x1+2,y1+2),(255,0,0),thickness=-1)
+
+    #cv2.imshow('img',img_w2)
+    #img_w2 = img_w.copy()
+    #cv2.waitKey(0)
+
+    # make paths of these points
     paths = []
-    thr = 25
+    thr = 2 * w2
     for point in points:
         path404 = True
         for path in paths:
-            if abs(path[-1][0] - point[0]) < thr:
+            if abs(path[-1][0] - point[0]) < thr and path[-1][1] != point[1]:
                 path.append(point)
+                cv2.line(img_w2, path[-2], path[-1], (255, 0, 0), thickness=3)
                 path404 = False
         if path404:
             paths.append([point])
 
-    g_paths = []
+    # keep the 5 longest paths
+    l_paths = []
     for path in paths:
-        if len(path) > 4:
-            g_paths.append(path)
+        l_paths.append(len(path))
+    _, paths = zip(*sorted(zip(l_paths, paths), reverse=True))
+    g_paths = paths[:5]
 
+    #cv2.imshow('img', img_w2)
+    #img_w2 = img_w.copy()
+    #cv2.waitKey(0)
+
+    # extract the POI with the path
     POI = []
     g_paths = sorted(g_paths)
-    cPath = g_paths[0]
-    cY = np.mean(cPath,0)[0]
-    for i in range(1,len(g_paths)-1):
+    cX = 0
+    tX = 0
+    splits = []
+    count = 1
+    for i in range(0,len(g_paths)):
         nPath = g_paths[i]
-        nY = np.mean(nPath,0)[0]
-        if abs(nY-cY) < 25:
-            pass
+        nX = np.mean(nPath,0)[0]
+        if abs(nX-cX) < 25:
+            cX = nX
+            tX += nX
+            count += 1
         else:
-            y = int((cY + nY)/2)
-            cPath.extend(nPath)
-            x = int(np.mean(cPath,0)[1])
-            cY = nY
-            cPath = nPath
-            POI.append((y,x))
+            splits.append(tX/count)
+            cX = nX
+            tX = nX
+            count = 1
+    if abs(w - cX) > 25:
+            splits.append(tX/count)
+    splits.append(w)
 
-    return POI
+    for i in range(0,len(splits)-1):
+            x = int((splits[i] + splits[i+1])/2)
+            y = int(h/2)
+            POI.append((x,y))
+            cv2.rectangle(img_w2,(x,y),(x+2,y+2),(255,0,0),thickness=-1)
+
+    #cv2.imshow('img', img_w2)
+    #img_w2 = img_w.copy()
+    #cv2.waitKey(0)
+
+    # find the top of the tooth
+    imgY1 = cv2.Scharr(img_w,-1,0,1)
+    imgY2 = cv2.Scharr(cv2.flip(img_w,0),-1,0,1)
+    imgY2 = cv2.flip(imgY2,0)
+    img2 = cv2.addWeighted(imgY1, 0.5, imgY2, 0.5, 0)
+    POI2 = []
+    for poi in POI:
+        vals = []
+        x = poi[0]
+        for i1 in range(w1, h, w1):
+            val = np.sum(img2[i1 - int(w1 / 2):i1 + int(w1 / 2), x - int(w2 / 2):x + int(w2 / 2)])
+            vals.append(val)
+
+        fft = scipy.fftpack.rfft(vals)
+        fft[30:] = 0
+        smoothed = scipy.fftpack.irfft(fft)
+        i_max1 = np.argmax(smoothed)
+        loc_maxs_i = scipy.signal.argrelmax(smoothed)[0]
+        if isUp:
+            i_max2 = sorted(loc_maxs_i)[0]
+            i_max = min(i_max1,i_max2)
+            y = int(0.66*(h + i_max*w1))
+            POI2.append((x,y))
+            cv2.rectangle(img_w2, (x, y), (x + 2, y + 2), (255, 0, 0), thickness=-1)
+        else:
+            i_max2 = sorted(loc_maxs_i)[-1]
+            i_max = max(i_max1,i_max2)
+            y = int(0.33*i_max*w1)
+            POI2.append((x,y))
+            cv2.rectangle(img_w2, (x, y), (x + 2, y + 2), (255, 0, 0), thickness=-1)
+
+    #cv2.imshow('img', img_w2)
+    #cv2.waitKey(0)
+
+    while POI2 > 5:
+        POI = POI2
+        s_dis = float('inf')
+        r_i = -1
+        for i in range(0,len(POI)-1):
+            dis = abs(POI2[i][0] - POI2[i+1][0])
+            if dis < s_dis:
+                s_dis = dis
+                r_i = i
+        POI2 = []
+        for i in range(0,len(POI)-1):
+            if i == r_i:
+                POI2.append((int((POI[i][0]+POI[i+1][0])/2),int((POI[i][1]+POI[i+1][1])/2)))
+            elif i != r_i+1:
+                POI2.append(POI[i])
+    return POI2
 
 def find_upper_pairs(img, path):
     img = iPP.enhance(img)
@@ -265,38 +361,27 @@ def find_upper_pairs(img, path):
 
 def refine_POI(pois, img, k=10):
     img = iPP.enhance2(img)
-    print 'start'
+    h, w = img.shape
+
+    # Finding path points
+    window = 10
+    img_vals = []
+    for x in range(int(0.4*w), int(0.6*w), window):
+        wdw_img = img[0:int(0.5*h), x - window:x + window]
+        img_vals.append(np.sum(wdw_img))
+
+    # only keep the 30 highest freqs to remove noise
+    fft = scipy.fftpack.rfft(img_vals)
+    fft[30:] = 0
+    smoothed = scipy.fftpack.irfft(fft)
+
+    plt.clf()
+    plt.plot(smoothed)
+    plt.show()
+
     for poi in pois:
-        P00 = poi[0] - k
-        P01 = poi[0] + k + 1
-        P10 = poi[1] - k
-        P11 = poi[1] + k + 1
-        img_window = img[P10:P11,P00:P01]
-        img_val = np.sqrt(np.sum(np.power(img_window,2)))
-        print img_val
-
-def find_POI(img,pairs):
-    POI = []
-    cPair = pairs[0]
-    i = 1
-    while i < len(pairs) - 1:
-        nPair = pairs[i]
-        if abs(cPair[0][0] - nPair[0][0]) < 25 and abs(cPair[1][0] - nPair[1][0]) < 25:
-            dis1 = sqrt(np.pow(cPair[0][0]-cPair[1][0],2) + np.pow(cPair[0][1]-cPair[1][1],2))
-            dis2 = sqrt(np.pow(nPair[0][0]-nPair[1][0],2) + np.pow(nPair[0][1]-nPair[1][1],2))
-            if dis2 < dis1:
-                cPair = nPair
-        else:
-            x1 = np.min((cPair[0][0],cPair[1][0],nPair[0][0],nPair[1][0]))
-            x2 = np.max((cPair[0][0],cPair[1][0],nPair[0][0],nPair[1][0]))
-            y1 = np.min((cPair[0][1],cPair[1][1],nPair[0][1],nPair[1][1]))
-            y2 = np.max((cPair[0][1],cPair[1][1],nPair[0][1],nPair[1][1]))
-            roI = img[y1:y2,x1:x2]
-            POI.append((int((x1+x2)/2),int((y1+y2)/2)))
-            cPair = nPair
-        i += 1
-    return POI
-
+        print abs(poi[1]-w/2)
+    print w,h
 
 def test1():
     for i in range(1, 10):
@@ -309,6 +394,8 @@ def test1():
 
         refine_POI(POIU,img)
         for poi in POIU:
+            cv2.rectangle(img2, poi, (poi[0] + 5, poi[1] + 5), (0, 255, 0), thickness=-1)
+        for poi in POIL:
             cv2.rectangle(img2, poi, (poi[0] + 5, poi[1] + 5), (0, 255, 0), thickness=-1)
 
         cv2.namedWindow('img', cv2.WINDOW_NORMAL)
@@ -323,7 +410,9 @@ def test1():
         POI = find_lower_pairs(img, best_path)
         POI.extend(find_upper_pairs(img, best_path))
 
-        for poi in POI:
+        for poi in POIU:
+            cv2.rectangle(img2, poi, (poi[0] + 5, poi[1] + 5), (0, 255, 0), thickness=-1)
+        for poi in POIL:
             cv2.rectangle(img2, poi, (poi[0] + 5, poi[1] + 5), (0, 255, 0), thickness=-1)
 
         cv2.namedWindow('img', cv2.WINDOW_NORMAL)
@@ -335,6 +424,8 @@ def test1():
 
 
 if __name__ == '__main__':
+    test1()
+
     img = cv2.imread('_Data/Radiographs/01.tif')
     img2 = img.copy()
     G_IMG = iPP.enhance2(img)
@@ -347,8 +438,8 @@ if __name__ == '__main__':
 #
     img_path = '_Data/Radiographs/'
     lmk_path = '_Data/Landmarks/original/landmarks'
-    tModel = TML(img_path,lmk_path,4)
+    tModel = TML(img_path,lmk_path,8)
 #
     print 'done 2'
 #
-    tModel.find_best_match(G_IMG,POIU)
+    tModel.find_best_match(G_IMG,POIL)
