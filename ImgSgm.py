@@ -143,7 +143,7 @@ def find_POI(img, window, isUp):
     w1 = int(h/25)
     w2 = int(w/50)
     points = []
-    img_w2 = img_w.copy()
+
     # search for some points
     if isUp:
         rU = h
@@ -178,11 +178,6 @@ def find_POI(img, window, isUp):
                 y1 = i1
                 if x1 > 25 and x1 < w-25:
                     points.append((x1,y1))
-                    cv2.rectangle(img_w2,(x1,y1),(x1+2,y1+2),(255,0,0),thickness=-1)
-
-    #cv2.imshow('img',img_w2)
-    #img_w2 = img_w.copy()
-    #cv2.waitKey(0)
 
     # make paths of these points
     paths = []
@@ -192,7 +187,6 @@ def find_POI(img, window, isUp):
         for path in paths:
             if abs(path[-1][0] - point[0]) < thr and path[-1][1] != point[1]:
                 path.append(point)
-                cv2.line(img_w2, path[-2], path[-1], (255, 0, 0), thickness=3)
                 path404 = False
         if path404:
             paths.append([point])
@@ -201,12 +195,7 @@ def find_POI(img, window, isUp):
     l_paths = []
     for path in paths:
         l_paths.append(len(path))
-    _, paths = zip(*sorted(zip(l_paths, paths), reverse=True))
     g_paths = paths[:5]
-
-    #cv2.imshow('img', img_w2)
-    #img_w2 = img_w.copy()
-    #cv2.waitKey(0)
 
     # extract the POI with the path
     POI = []
@@ -235,11 +224,6 @@ def find_POI(img, window, isUp):
             x = int((splits[i] + splits[i+1])/2)
             y = int(h/2)
             POI.append((x,y))
-            cv2.rectangle(img_w2,(x,y),(x+2,y+2),(255,0,0),thickness=-1)
-
-    #cv2.imshow('img', img_w2)
-    #img_w2 = img_w.copy()
-    #cv2.waitKey(0)
 
     # find the top of the tooth
     imgY1 = cv2.Scharr(img_w,-1,0,1)
@@ -264,18 +248,13 @@ def find_POI(img, window, isUp):
             i_max = min(i_max1,i_max2)
             y = int(0.66*(h + i_max*w1))
             POI2.append((x,y))
-            cv2.rectangle(img_w2, (x, y), (x + 2, y + 2), (255, 0, 0), thickness=-1)
         else:
             i_max2 = sorted(loc_maxs_i)[-1]
             i_max = max(i_max1,i_max2)
             y = int(0.33*i_max*w1)
             POI2.append((x,y))
-            cv2.rectangle(img_w2, (x, y), (x + 2, y + 2), (255, 0, 0), thickness=-1)
 
-    #cv2.imshow('img', img_w2)
-    #cv2.waitKey(0)
-
-    while POI2 > 5:
+    while len(POI2) > 4:
         POI = POI2
         s_dis = float('inf')
         r_i = -1
@@ -284,13 +263,21 @@ def find_POI(img, window, isUp):
             if dis < s_dis:
                 s_dis = dis
                 r_i = i
+
         POI2 = []
-        for i in range(0,len(POI)-1):
+        for i in range(0,len(POI)):
             if i == r_i:
                 POI2.append((int((POI[i][0]+POI[i+1][0])/2),int((POI[i][1]+POI[i+1][1])/2)))
             elif i != r_i+1:
                 POI2.append(POI[i])
-    return POI2
+
+    POI = []
+    for i in range (0,len(POI2)):
+        x = POI2[i][0]
+        y = POI2[i][1]
+        POI.append((x,y))
+
+    return POI
 
 def find_upper_pairs(img, path):
     img = iPP.enhance(img)

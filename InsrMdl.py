@@ -136,6 +136,9 @@ if __name__ == '__main__':
         img2 = img.copy()
         G_IMG = iPP.enhance2(img)
         best_path = find_jawline(img)
+
+        print 'Jawline found!'
+
         start = best_path[0]
         window = best_path[1]
         n = len(best_path[2])
@@ -148,4 +151,19 @@ if __name__ == '__main__':
             if error < b_error:
                 b_error = error
                 b_points = pnts
-        find_POI(img, b_points, False)
+
+        print 'ROI found!'
+
+        poi = find_POI(img, b_points, False)
+        img3 = img.copy()
+        cv2.rectangle(img3, b_points[0], b_points[1], (0, 255, 0), thickness=5)
+        print poi
+        for point in poi:
+            x = point[0] + b_points[0][0]
+            y = point[1] + b_points[0][1]
+            cv2.rectangle(img3,(x,y),(x+5,y+5),(255,0,0),thickness=-1)
+
+        cv2.namedWindow('img', cv2.WINDOW_NORMAL)
+        cv2.resizeWindow('img', 1200, 800)
+        cv2.imshow('img', img3)
+        cv2.waitKey(0)

@@ -83,7 +83,7 @@ if __name__ == '__main__':
     nbImgs = 14
     nbDims = 40
     tooth = 4
-    asm = ASM(folder, nbImgs, nbDims, 1)
+    asm = ASM(folder, nbImgs, nbDims, tooth)
     pts = asm.mu
     landmarks = LMS(pts)
     landmarks = landmarks.scale_to_window(asm.mW)
