@@ -7,6 +7,12 @@ from ACM import ACM as ACM
 from Landmarks import Landmarks as LMS
 import ImgPP
 
+global fig
+global p1
+global p2
+global p3
+global p4
+
 tooth = []
 tmpTooth = []
 dragging = False

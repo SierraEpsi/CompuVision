@@ -34,6 +34,7 @@ def filterImage(img):
     canny_result = np.copy(img)
     canny_result[img_Edges.astype(np.bool)] = 0
     cv2.imshow('img5', canny_result)
+    cv2.waitKey()
     cv2.destroyAllWindows()
 
     return img_Edges
