@@ -18,7 +18,7 @@ class InsrModel:
         self.h = 0
         self.isUp = isUp
         X = self.make_X(img_path, isUp, lmk_path, nr)
-        self.mu,self.pcm = ut.pca(X,4)
+        self.mu,self.pcm,_ = ut.pca(X,4)
 
     def make_X(self, img_path, isUp, lmk_path, nr):
         X = np.zeros((14,250000))

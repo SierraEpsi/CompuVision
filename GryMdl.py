@@ -9,7 +9,7 @@ from numpy import linalg as la
 import Util as ut
 
 class GreyModel:
-    def __init__(self, img_path, lmk_path, tooth_nr, nr=14,k=3, useGrad = True):
+    def __init__(self, img_path, lmk_path, tooth_nr, nr=14,k=3, useGrad = False):
 
         self.mu = []
         self.pcm = []
@@ -23,9 +23,9 @@ class GreyModel:
                 iS = '0' + iS
             img = cv2.imread(img_path + iS + '.tif')
             if useGrad:
-                img = IPP.enhance2(img)
-            else:
                 img = IPP.GRimg(img)
+            else:
+                img = IPP.enhance2(img)
             X = self.add2model(X,img, landmarks)
         self.compute_model(X)
 
@@ -46,13 +46,13 @@ class GreyModel:
 
     def compute_model(self,X):
         for tooth_vectors in X:
-            mu,pcm = ut.pca(tooth_vectors,4)
+            mu,pcm,_ = ut.pca(tooth_vectors,4)
             self.mu.append(mu)
             self.pcm.append(pcm)
 
     def sample_point(self, X, i):
         Y = ut.project(X,self.mu[i],self.pcm[i])
-        Xo = ut.reconstruct(Y,self.mu[i],self.pcm[i],2)
+        Xo = ut.reconstruct(Y,self.mu[i],self.pcm[i])
         error = np.linalg.norm(Xo-X)
         return error
 
@@ -79,6 +79,7 @@ class GreyModel:
         k = self.k
         b_error = float('inf')
         b_point = -1
+        b_steps = steps+1
         xt = p2[0] - p0[0]
         yt = p2[1] - p0[1]
         norm = np.sqrt(xt**2+yt**2)
@@ -102,6 +103,10 @@ class GreyModel:
             error = self.sample_point(vector, l_nr)
             if error < b_error:
                 b_error = error
+                b_steps = i
+                b_point = [pX,pY]
+            elif error == b_error and abs(i) < b_steps:
+                b_steps = abs(i)
                 b_point = [pX,pY]
 
         return b_point, b_error

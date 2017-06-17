@@ -41,10 +41,10 @@ def pca(X,n=-1):
                                 break
 
         pcm = np.array(eV[:,:n])
-        pcm = pcm * np.sqrt(eW[:n])
+        eW = np.sqrt(eW[:n])
         pcm = np.array(pcm).squeeze()
 
-        return mu, pcm
+        return mu, pcm, eW
 
 
 def project(X,mu,pcm):
@@ -53,8 +53,8 @@ def project(X,mu,pcm):
         return Y
 
 
-def reconstruct( Y, mu, pcm,doClip=-1):
-        if doClip!=-1:
+def reconstruct( Y, mu, pcm,doClip = -1):
+        if doClip != -1:
                 Y = np.clip(Y,-doClip,doClip)
         X = np.dot(Y, pcm.T)
         X = X + mu

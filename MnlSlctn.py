@@ -3,9 +3,9 @@ import cv2.cv as cv
 import numpy as np
 
 import ImgPP
+from ACM import ACM as ACM
 from ASM import ASM as ASM
 from Landmarks import Landmarks as LMS
-from old.ACM import ACM as ACM
 
 global fig
 global p1

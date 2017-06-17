@@ -1,5 +1,6 @@
 from GryMdl import GreyModel
 from ASM import ASM
+from ACM import ACM
 import numpy as np
 import cv2
 import ImgPP as IPP
@@ -13,14 +14,14 @@ from InsrMdl import InsrModel as IModel
 
 if __name__ == '__main__':
 
-        img = cv2.imread('_Data/Radiographs/02.tif')
+        img = cv2.imread('_Data/Radiographs/01.tif')
         img2 = img.copy()
         G_img = IPP.enhance2(img)
         G_img2 = IPP.GRimg(img)
 
         img_path = '_Data/Radiographs/'
         lmk_path = '_Data/Landmarks/original/landmarks'
-        gModel = GreyModel(img_path, lmk_path, 1)
+        gModel = GreyModel(img_path, lmk_path, 1, k = 5)
         print 'done 1'
 
         folder = '_Data/landmarks/original/'
@@ -51,6 +52,10 @@ if __name__ == '__main__':
         while i < maxit:
 
                 pts, error = gModel.find_points(G_img, pts, 25)
+                acm = ACM(-0.01, -0.1, 25, G_img2, pts)
+                for i in range(0,10):
+                        acm.greedy_step()
+                pts = acm.pts
                 errors.append(error)
 
                 pimg = pts.reshape(-1, 1, 2)

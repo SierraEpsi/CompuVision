@@ -21,6 +21,7 @@ class ASM:
     def __init__(self, folder_path, nbImgs, nbDims, tooth, doPlot = False):
         self.mu = None
         self.pcm = None
+        self.eW = None
         self.mW = [0,0]
 
         self.computeModel(folder_path,tooth,nbImgs,nbDims, doPlot)
@@ -64,9 +65,8 @@ class ASM:
             X.append(landmarks.as_vector())
         X = np.array(X)
 
-        _,pcm = ut.pca(X)
+        _, self.pcm, self.eW = ut.pca(X)
         self.mu = mu.as_vector()
-        self.pcm = pcm
 
     def allign_shape(self, x1, x2):
         
@@ -142,17 +142,24 @@ class ASM:
             Ty += t[1]
             tsf *= sf
             tAngle += angle
+            tAngle = np.clip(tAngle,-0.55,0.55)
 
             y = y.invT(t,sf,angle)
+            # plt.plot(x.as_matrix()[:,0],x.as_matrix()[:,1],'*')
+            # plt.plot(y.as_matrix()[:,0], y.as_matrix()[:,1],'*')
+            # plt.show()
+
             xV = x.as_vector()
             yV = y.as_vector()
             xx = np.dot(xV, yV)
             yT = Landmarks(yV * (1.0 / xx))
             nb = ut.project(yT.as_vector(),self.mu,self.pcm)
-            nb = np.clip(nb,-3,3)
+            for i in range(0,len(b)):
+                nb[i] = np.clip(nb[i],-self.eW[i],self.eW[i])
             diff = np.sum(abs(b-nb))
             print tsf
             b = nb
+            print b
             it+=1
             # plt.plot(x.as_matrix()[:,0],x.as_matrix()[:,1])
             # plt.plot(yT.as_matrix()[:,0],yT.as_matrix()[:,1])
@@ -162,7 +169,6 @@ class ASM:
 
         Y = Landmarks(x).T([Tx,Ty],tsf,tAngle)
         return Y.as_matrix().astype('int32')
-
 
 # Gives the 7 best pca modes
 if __name__ == '__main__':
@@ -187,9 +193,20 @@ if __name__ == '__main__':
             p.plot(pts[:40],pts[40:])
     plt.show()
 
-    tooth1 = Landmarks('_Data/landmarks/original/landmarks2-1.txt')
+
+    pts = [3, 2, 1, 0, 0, 0, 0]
+    pts = np.transpose(pts)
+    pts = ut.reconstruct(pts, asm.mu, asm.pcm)
+    X = Landmarks(pts).as_vector()
+    print ut.project(X, asm.mu, asm.pcm)
+    print np.dot(asm.pcm.T,asm.pcm)
+
+
+    tooth1 = Landmarks('_Data/landmarks/original/landmarks2-5.txt')
     tooth2 = Landmarks('_Data/landmarks/original/landmarks2-2.txt')
     X, error = asm.model(tooth1,True)
+    X2  = asm.estimate_trans(tooth1.as_matrix())
+
     print "The error of a matching tooth: ", error
     X, error = asm.model(tooth2,True)
     print "The error of a non-matching tooth: ", error
