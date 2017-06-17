@@ -5,6 +5,10 @@ import numpy as np
 import MnlSlctn
 from ASM import ASM as ASM
 from numpy import linalg as la
+import Util as ut
+from ImgSgm import find_jawline
+from ImgSgm import find_POI
+import ImgPP as iPP
 
 class InsrModel:
     def __init__(self, img_path, lmk_path, isUp, nr=14):
@@ -14,7 +18,7 @@ class InsrModel:
         self.h = 0
         self.isUp = isUp
         X = self.make_X(img_path, isUp, lmk_path, nr)
-        self.compute_model(X,True)
+        self.mu,self.pcm = ut.pca(X,4)
 
     def make_X(self, img_path, isUp, lmk_path, nr):
         X = np.zeros((14,250000))
@@ -66,30 +70,9 @@ class InsrModel:
         self.h = self.h/nr
         return X
 
-    def compute_model(self, X, doPlot=False):
-        mu = np.average(X, axis=0)
-        X = np.subtract(X , mu.transpose())
-
-        eigenvalues, eigenvectors = np.linalg.eig(np.dot(X, np.transpose(X)))
-        eigenvectors = np.dot(np.transpose(X), eigenvectors)
-
-        eig = zip(eigenvalues, np.transpose(eigenvectors))
-        eig = map(lambda x: (x[0] * np.linalg.norm(x[1]),
-                             x[1] / np.linalg.norm(x[1])), eig)
-
-        eig = sorted(eig, reverse=True, key=lambda x: abs(x[0]))
-        eig = eig[:5]
-
-        eigenvalues, eigenvectors = map(np.array, zip(*eig))
-
-        self.mu = mu
-        self.pcm = eigenvectors.transpose()
-
     def sample_vector(self, X):
-        Y = np.subtract(X, self.mu)
-        Y = np.dot(Y, self.pcm)
-        Xo = np.dot(Y, np.transpose(self.pcm))
-        Xo = Xo + self.mu
+        Y = ut.project(X,self.mu,self.pcm)
+        Xo = ut.reconstruct(Y,self.mu,self.pcm,1)
         error = la.norm(Xo-X)
         return error
 
@@ -122,14 +105,60 @@ class InsrModel:
         return b_error, b_pnts
 
 
+
+    def auto_init(self, img, isUp):
+
+            img2 = img.copy()
+            best_path = find_jawline(img2)
+
+            print 'Jawline found!'
+
+            start = best_path[0]
+            window = best_path[1]
+            n = len(best_path[2])
+            b_error = float('inf')
+            b_points = -1
+            for i in range(int(0.4 * n), int(0.6 * n)):
+                x = (start + i) * window
+                y = best_path[2][i]
+                error, pnts = self.find_best_match(img2, (x, y))
+                if error < b_error:
+                    b_error = error
+                    b_points = pnts
+
+            print 'ROI found!'
+
+            poi = find_POI(img, b_points, isUp)
+            for point in poi:
+                x = point[0] + b_points[0][0]
+                y = point[1] + b_points[0][1]
+            poi[0] = x
+            poi[1] = y
+
+            return poi
+
+
+    def find_window(self, best_path, G_IMG):
+        start = best_path[0]
+        window = best_path[1]
+        n = len(best_path[2])
+        b_error = float('inf')
+        b_points = -1
+        for i in range(int(0.4 * n), int(0.6 * n), 1):
+            x = (start + i) * window
+            y = best_path[2][i]
+            error, pnts = self.find_best_match(G_IMG, (x, y))
+            if error < b_error:
+                b_error = error
+                b_points = pnts
+        return b_points
+
+
 if __name__ == '__main__':
+
     img_path = '_Data/Radiographs/'
     lmk_path = '_Data/Landmarks/original/landmarks'
     tModel = InsrModel(img_path,lmk_path,False)
-
-    from ImgSgm import find_jawline
-    from ImgSgm import find_POI
-    import ImgPP as iPP
 
     for id in range(1,10):
         img = cv2.imread('_Data/Radiographs/0' + str(id) + '.tif')
@@ -139,18 +168,7 @@ if __name__ == '__main__':
 
         print 'Jawline found!'
 
-        start = best_path[0]
-        window = best_path[1]
-        n = len(best_path[2])
-        b_error = float('inf')
-        b_points = -1
-        for i in range(int(0.4*n),int(0.6*n)):
-            x = (start+i) * window
-            y = best_path[2][i]
-            error, pnts = tModel.find_best_match(G_IMG,(x,y))
-            if error < b_error:
-                b_error = error
-                b_points = pnts
+        b_points = find_window()
 
         print 'ROI found!'
 

@@ -1,14 +1,14 @@
-import ImgPP as iPP
-import numpy as np
-import matplotlib.pyplot as plt
-import scipy.fftpack
-import scipy.signal
-import scipy.spatial.distance as spDst
-import scipy.cluster.hierarchy as spHrch
-from scipy.ndimage import morphology
 import cv2
 import cv2.cv as cv
-from TthMdl import ToothModel as TML
+import matplotlib.pyplot as plt
+import numpy as np
+import scipy.fftpack
+import scipy.signal
+from scipy.ndimage import morphology
+
+import ImgPP as iPP
+from old.TthMdl import ToothModel as TML
+
 
 class JPath:
     def __init__(self, point, index, w=25):
@@ -47,42 +47,15 @@ class JPath:
         self.pointsY = np.add(np.multiply(np.power(self.pointsX,2),fit[0]) + np.multiply(self.pointsX,fit[1]), fit[2])
         return [self.start, self.w, self.pointsY]
 
-class TPath:
-    def __init__(self, point):
-        self.points = [point]
-        self.intensity = 0
-
-    def add_best(self, some_points, img):
-        min_intensity = float('inf')
-        best_point = -1
-        index = -1
-        for i in range(0,len(some_points)):
-            point = some_points[i]
-            intensity = cv.InitLineIterator(cv.fromarray(img), self.points[-1], point)
-            if intensity < min_intensity:
-                min_intensity = intensity
-                best_point = point
-                index = i
-        if best_point != -1:
-            self.points.append(best_point)
-            self.intensity += min_intensity
-        return index
-
-def find_jawline(img):
-    img = iPP.enhance(img)
-    h,w = img.shape
-
-    # inverse img and apply gaussian to give more importance to center
-    img2 = morphology.white_tophat(img, size=500)
-    img2 = 255-img2
-    img2 = cv2.GaussianBlur(img2, (111,25), 5)
+def find_jawline(img, window = 10):
+    img = iPP.jaw_enhance(img)
+    h, w = img.shape
 
     # Finding path points
-    window = 10
     pot_jaw_pts = []
     for x in range(window,w,window):
         offset = int(0.4*h)
-        wdw_img = img2[offset:int(0.75*h),x-window:x+window]
+        wdw_img = img[offset:int(0.75*h),x-window:x+window]
         img_vals = np.sum(wdw_img,1)
 
         # only keep the 30 highest freqs to remove noise
@@ -130,8 +103,6 @@ def find_jawline(img):
     return best_path.return_path()
 
 def find_POI(img, window, isUp):
-    img = iPP.enhance(img)
-
     img_w = img[window[0][1]:window[1][1], window[0][0]:window[1][0]].copy()
 
     imgX1 = cv2.Scharr(img_w, -1, 1, 0)
@@ -220,164 +191,12 @@ def find_POI(img, window, isUp):
         if isUp:
             i_max2 = sorted(loc_maxs_i)[0]
             i_max = min(i_max1,i_max2)
-            y = int(0.66*(h + i_max*w1))
-            POI2.append((x,y))
+            y = int(0.45*(h + i_max*w1))
+            POI2.append((x+window[0][0],y+window[0][1]))
         else:
             i_max2 = sorted(loc_maxs_i)[-1]
             i_max = max(i_max1,i_max2)
-            y = int(0.33*i_max*w1)
-            POI2.append((x,y))
+            y = int(0.55*i_max*w1)
+            POI2.append((x+window[0][0],y+window[0][1]))
 
     return POI2
-
-def find_upper_pairs(img, path):
-    img = iPP.enhance(img)
-    h,w = img.shape
-    start = path[0]
-    window = path[1]
-
-    imgX1 = cv2.Scharr(img, -1, 1, 0)
-    imgX2 = cv2.Scharr(cv2.flip(img, 1), -1, 1, 0)
-    imgX2 = cv2.flip(imgX2, 1)
-    img2 = cv2.addWeighted(imgX1, 0.5, imgX2, 0.5, 0)
-
-    # lower
-    w2 = 20
-    points = []
-    for w1 in range (40,200,w2):
-        off1 = w1
-        off2 = w1 + w2
-        img_vals = []
-        for i in range(0,len(path[2])):
-            x = (start + i) * window
-            y = int(path[2][i])
-            img_val = np.sum(img2[y-off2:y-off1,x-window:x+window])
-            img_vals.append(img_val)
-        fft = scipy.fftpack.rfft(img_vals)
-        fft[30:] = 0
-        smoothed = scipy.fftpack.irfft(fft)
-        loc_maxs_i = scipy.signal.argrelmax(smoothed)[0]
-        for point in loc_maxs_i:
-            x1 = (start + point) * window
-            y1 = int(path[2][point]) - w1
-            points.append((x1,y1))
-
-    paths = []
-    thr = 25
-    for point in points:
-        path404 = True
-        for path in paths:
-            if abs(path[-1][0] - point[0]) < thr:
-                path.append(point)
-                path404 = False
-        if path404:
-            paths.append([point])
-
-    g_paths = []
-    for path in paths:
-        if len(path) > 4:
-            g_paths.append(path)
-
-    POI = []
-    g_paths = sorted(g_paths)
-    cPath = g_paths[0]
-    cY = np.mean(cPath,0)[0]
-    for i in range(1,len(g_paths)-1):
-        nPath = g_paths[i]
-        nY = np.mean(nPath,0)[0]
-        if abs(nY-cY) < 25:
-            pass
-        else:
-            y = int((cY + nY)/2)
-            cPath.extend(nPath)
-            x = int(np.mean(cPath,0)[1])
-            cY = nY
-            cPath = nPath
-            POI.append((y,x))
-
-    return POI
-
-def refine_POI(pois, img, k=10):
-    img = iPP.enhance2(img)
-    h, w = img.shape
-
-    # Finding path points
-    window = 10
-    img_vals = []
-    for x in range(int(0.4*w), int(0.6*w), window):
-        wdw_img = img[0:int(0.5*h), x - window:x + window]
-        img_vals.append(np.sum(wdw_img))
-
-    # only keep the 30 highest freqs to remove noise
-    fft = scipy.fftpack.rfft(img_vals)
-    fft[30:] = 0
-    smoothed = scipy.fftpack.irfft(fft)
-
-    plt.clf()
-    plt.plot(smoothed)
-    plt.show()
-
-    for poi in pois:
-        print abs(poi[1]-w/2)
-    print w,h
-
-def test1():
-    for i in range(1, 10):
-        img = cv2.imread('_Data/Radiographs/0' + str(i) + '.tif')
-        img2 = img.copy()
-        best_path = find_jawline(img)
-
-        POIL = find_lower_pairs(img, best_path)
-        POIU = find_upper_pairs(img, best_path)
-
-        refine_POI(POIU,img)
-        for poi in POIU:
-            cv2.rectangle(img2, poi, (poi[0] + 5, poi[1] + 5), (0, 255, 0), thickness=-1)
-        for poi in POIL:
-            cv2.rectangle(img2, poi, (poi[0] + 5, poi[1] + 5), (0, 255, 0), thickness=-1)
-
-        cv2.namedWindow('img', cv2.WINDOW_NORMAL)
-        cv2.resizeWindow('img', 1500, 1000)
-        cv2.imshow('img', img2)
-        cv2.waitKey(0)
-    for i in range(10, 15):
-        img = cv2.imread('_Data/Radiographs/' + str(i) + '.tif')
-        img2 = img.copy()
-        best_path = find_jawline(img)
-
-        POI = find_lower_pairs(img, best_path)
-        POI.extend(find_upper_pairs(img, best_path))
-
-        for poi in POIU:
-            cv2.rectangle(img2, poi, (poi[0] + 5, poi[1] + 5), (0, 255, 0), thickness=-1)
-        for poi in POIL:
-            cv2.rectangle(img2, poi, (poi[0] + 5, poi[1] + 5), (0, 255, 0), thickness=-1)
-
-        cv2.namedWindow('img', cv2.WINDOW_NORMAL)
-        cv2.resizeWindow('img', 1500, 1000)
-        cv2.imshow('img', img2)
-        cv2.waitKey(0)
-
-
-
-
-if __name__ == '__main__':
-    test1()
-
-    img = cv2.imread('_Data/Radiographs/01.tif')
-    img2 = img.copy()
-    G_IMG = iPP.enhance2(img)
-    best_path = find_jawline(img)
-#
-    POIL = find_lower_pairs(img, best_path)
-    POIU = find_upper_pairs(img, best_path)
-#
-    print 'done 1'
-#
-    img_path = '_Data/Radiographs/'
-    lmk_path = '_Data/Landmarks/original/landmarks'
-    tModel = TML(img_path,lmk_path,8)
-#
-    print 'done 2'
-#
-    tModel.find_best_match(G_IMG,POIL)

@@ -6,7 +6,9 @@ import numpy as np
 class Landmarks(object):
     def __init__(self, source):
         self.pts = -1
-        if isinstance(source, str):
+        if isinstance(source,Landmarks):
+            self.pts = source.as_matrix()
+        elif isinstance(source, str):
             self.load_landmarks(source)
         elif isinstance(source, np.ndarray) and len(source.shape) == 2:
             self.pts = source
@@ -27,23 +29,21 @@ class Landmarks(object):
 
     def get_centroid(self):
         return np.mean(self.pts, axis=0)
-
-    def get_center(self):
-        ma = np.max(self.pts,0)
-        mi = np.max(self.pts,0)
-        center = np.add(ma,mi)
-        center = np.divide(center,2)
-        return center
+    #
+    # def get_center(self):
+    #     ma = np.max(self.pts,0)
+    #     mi = np.max(self.pts,0)
+    #     center = np.add(ma,mi)
+    #     center = np.divide(center,2)
+    #     return center
 
     def translate_to_origin(self):
-        center = self.get_centroid()
-        pts = self.pts - center
+        pts = self.pts - self.get_centroid()
         return Landmarks(pts)
-
-    def translate_center_to_origin(self):
-        center = self.get_center()
-        pts = self.pts - center
-        return Landmarks(pts)
+    #
+    # def translate_center_to_origin(self):
+    #     pts = self.pts - self.get_center()
+    #     return Landmarks(pts)
 
     def scale_to_unit(self):
         centroid = self.get_centroid()

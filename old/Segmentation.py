@@ -1,12 +1,9 @@
+import cv2
+import matplotlib.pyplot as plt
 import numpy as np
 
-import cv2
-import cv
-import math
 import ImgPP
 from ASM import ASM as ASM
-import matplotlib.pyplot as plt
-from ACM import ACM as ACM
 
 refPt = []
 
