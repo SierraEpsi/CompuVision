@@ -135,9 +135,11 @@ def find_POI(img, window, isUp):
         loc_maxs_i = scipy.signal.argrelmax(smoothed)[0]
 
         for point in loc_maxs_i:
-            x1 = (1+point)*w2
-            y1 = i1
-            points.append((x1, y1))
+            intesity = smoothed[point]
+            if intesity > 1000:
+                x1 = (1+point)*w2
+                y1 = i1
+                points.append((x1, y1))
 
     # group
     wg1 = int(0.125*w)
@@ -147,12 +149,16 @@ def find_POI(img, window, isUp):
     g1 = []
     g2 = []
     g3 = []
+    img3 = img_w.copy()
     for point in points:
         if point[0] > wg1 and point[0] < wg2:
+            cv2.rectangle(img3,(point[0],point[1]),(point[0]+3,point[1]+3),(100,100,100),thickness = -1)
             g1.append(point[0])
         elif point[0] > wg2 and point[0] < wg3:
+            cv2.rectangle(img3,(point[0],point[1]),(point[0]+3,point[1]+3),(100,100,100),thickness = -1)
             g2.append(point[0])
         elif point[0] > wg3 and point[0] < wg4:
+            cv2.rectangle(img3,(point[0],point[1]),(point[0]+3,point[1]+3),(100,100,100),thickness = -1)
             g3.append(point[0])
 
     g1 = int(np.mean(g1))
@@ -160,7 +166,6 @@ def find_POI(img, window, isUp):
     g3 = int(np.mean(g3))
 
 
-    img3 = img_w.copy()
     cv2.line(img3,(g1,0),(g1,h),(255,0,0),thickness=2)
     cv2.line(img3,(g2,0),(g2,h),(255,0,0),thickness=2)
     cv2.line(img3,(g3,0),(g3,h),(255,0,0),thickness=2)

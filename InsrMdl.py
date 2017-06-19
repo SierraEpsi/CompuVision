@@ -14,11 +14,12 @@ class InsrModel:
     def __init__(self, img_path, lmk_path, isUp, nr=14):
         self.mu = []
         self.pcm = []
+        self.eW = []
         self.w = 0
         self.h = 0
         self.isUp = isUp
         X = self.make_X(img_path, isUp, lmk_path, nr)
-        self.mu,self.pcm,_ = ut.pca(X,4)
+        self.mu, self.pcm, self.eW = ut.pca(X,4)
 
     def make_X(self, img_path, isUp, lmk_path, nr):
         X = np.zeros((14,250000))
@@ -72,7 +73,9 @@ class InsrModel:
 
     def sample_vector(self, X):
         Y = ut.project(X,self.mu,self.pcm)
-        Xo = ut.reconstruct(Y,self.mu,self.pcm,1)
+        for i in range(0, len(Y)):
+            Y[i] = np.clip(Y[i], -self.eW[i], self.eW[i])
+        Xo = ut.reconstruct(Y,self.mu,self.pcm)
         error = la.norm(Xo-X)
         return error
 
@@ -84,7 +87,7 @@ class InsrModel:
     def find_best_match(self, img, pnt):
         b_error = float('inf')
 
-        for Ty in range(0,16,5):
+        for Ty in range(0,16,3):
             for Sv in np.arange(0.8,1.2,0.1):
                 for Sh in np.arange(0.8,1.2,0.1):
                     if self.isUp:
@@ -144,7 +147,7 @@ class InsrModel:
         n = len(best_path[2])
         b_error = float('inf')
         b_points = -1
-        for i in range(int(0.4 * n), int(0.6 * n), 1):
+        for i in range(int(0.4 * n), int(0.6 * n)):
             x = (start + i) * window
             y = best_path[2][i]
             error, pnts = self.find_best_match(G_IMG, (x, y))
@@ -164,22 +167,24 @@ if __name__ == '__main__':
         img = cv2.imread('_Data/Radiographs/0' + str(id) + '.tif')
         img2 = img.copy()
         G_IMG = iPP.enhance2(img)
+        G_IMG2 = iPP.GRimg(img)
         best_path = find_jawline(img)
 
         print 'Jawline found!'
 
-        b_points = find_window()
+        b_points = tModel.find_window(best_path, G_IMG)
 
         print 'ROI found!'
 
-        poi = find_POI(img, b_points, False)
+        poi = find_POI(G_IMG2, b_points, False)
         img3 = img.copy()
         cv2.rectangle(img3, b_points[0], b_points[1], (0, 255, 0), thickness=5)
-        print poi
+
         for point in poi:
-            x = point[0] + b_points[0][0]
-            y = point[1] + b_points[0][1]
-            cv2.rectangle(img3,(x,y),(x+5,y+5),(255,0,0),thickness=-1)
+            x = point[0]
+            y = point[1]
+            print x,y
+            cv2.rectangle(img3,(x,y),(x+5,y+5),(255,0,255),thickness=-1)
 
         cv2.namedWindow('img', cv2.WINDOW_NORMAL)
         cv2.resizeWindow('img', 1200, 800)

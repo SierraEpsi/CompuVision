@@ -81,20 +81,23 @@ def mouse_move(x, y, img):
     cv2.imshow('choose', tmp)
 
 if __name__ == '__main__':
-    img = cv2.imread('_Data/Radiographs/05.tif')
+    img = cv2.imread('_Data/Radiographs/01.tif')
     img2 = img.copy()
     G_img = ImgPP.enhance2(img)
     G_img = ImgPP.GRimg2(G_img)
     folder = '_Data/landmarks/original/'
     nbImgs = 14
     nbDims = 40
-    tooth = 4
+    tooth = 1
     asm = ASM(folder, nbImgs, nbDims, tooth)
     pts = asm.mu
     landmarks = LMS(pts)
     landmarks = landmarks.scale_to_window(asm.mW)
     pts = landmarks.as_matrix().astype('int32')
-    pimg = landmarks.translate(init(pts,img)).as_matrix().astype('int32')
+    #(1306,732)
+    #[(56, 189), (159, 218), (253, 211), (354, 196)]
+    #pimg = landmarks.translate(init(pts,img)).as_matrix().astype('int32')
+    pimg = landmarks.translate((1306+56,732+189)).as_matrix().astype('int32')
     while True:
         acm = ACM(-0.01, -0.1, 25.0, G_img, pimg)
         diff = -151

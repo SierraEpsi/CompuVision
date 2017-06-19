@@ -39,9 +39,24 @@ if __name__ == '__main__':
 
         # AUTO
         best_path = ISgm.find_jawline(img)
+
+        if True: #doPlot
+                img3 = G_img.copy()
+                pts = []
+                for i in range(0,len(best_path[2])):
+                        point = (int((best_path[0] + i)*best_path[1]), int(best_path[2][i]))
+                        pts.append(point)
+                pimg = np.reshape(pts,(-1, 1, 2))
+                img3 = cv2.cvtColor(G_img, cv2.COLOR_GRAY2BGR)
+                cv2.polylines(img3, [pimg], False, (0, 0, 256), thickness=5)
+                cv2.namedWindow('choose', cv2.WINDOW_NORMAL)
+                cv2.resizeWindow('choose', 1200, 800)
+                cv2.imshow('choose', img3)
+                cv2.waitKey(0)
+
         iModel = IModel(img_path, lmk_path, True)
         window = iModel.find_window(best_path, G_img)
-        poi_u = ISgm.find_POI(G_img, window, True)
+        poi_u = ISgm.find_POI(G_img2, window, True)
         pts = landmarks.translate(poi_u[1]).as_matrix().astype('int32')
 
         i=0
