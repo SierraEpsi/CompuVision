@@ -11,62 +11,66 @@ from ImgSgm import find_POI
 import ImgPP as iPP
 
 class InsrModel:
-    def __init__(self, img_path, lmk_path, isUp, nr=14):
+    def __init__(self, img_path, lmk_path, isUp, nr=14, leaveOneOut = -1):
         self.mu = []
         self.pcm = []
         self.eW = []
         self.w = 0
         self.h = 0
         self.isUp = isUp
-        X = self.make_X(img_path, isUp, lmk_path, nr)
+        X = self.make_X(img_path, isUp, lmk_path, nr, leaveOneOut)
         self.mu, self.pcm, self.eW = ut.pca(X,4)
 
-    def make_X(self, img_path, isUp, lmk_path, nr):
+    def make_X(self, img_path, isUp, lmk_path, nr, leaveOneOut=-1):
         X = np.zeros((14,250000))
         for i in range(1, nr + 1):
-            if isUp:
-                p00 = -1
-                p01 = -1
-                p10 = -1
-                p11 = -1
-                for j in range(1, 5):
-                    landmarks = LMS(lmk_path + str(i) + '-' + str(j) + '.txt')
-                    p0, p1 = landmarks.get_window()
-                    if p00 == -1 or p0[0] < p00:
-                        p00 = p0[0]
-                    if p01 == -1 or p0[1] < p01:
-                        p01 = p0[1]
-                    if p10 == -1 or p1[0] > p10:
-                        p10 = p1[0]
-                    if p11 == -1 or p1[1] > p11:
-                        p11 = p1[1]
-            else:
-                p00 = -1
-                p01 = -1
-                p10 = -1
-                p11 = -1
-                for j in range(5, 9):
-                    landmarks = LMS(lmk_path + str(i) + '-' + str(j) + '.txt')
-                    p0, p1 = landmarks.get_window()
-                    if p00 == -1 or p0[0] < p00:
-                        p00 = p0[0]
-                    if p01 == -1 or p0[1] < p01:
-                        p01 = p0[1]
-                    if p10 == -1 or p1[0] > p10:
-                        p10 = p1[0]
-                    if p11 == -1 or p1[1] > p11:
-                        p11 = p1[1]
+            if leaveOneOut != i:
+                if isUp:
+                    p00 = -1
+                    p01 = -1
+                    p10 = -1
+                    p11 = -1
+                    for j in range(1, 5):
+                        path = lmk_path + 'landmarks' + str(i) + '-' + str(j) + '.txt'
+                        landmarks = LMS(path)
 
-            iS = str(i)
-            if i < 10:
-                iS = '0' + iS
-            img = cv2.imread(img_path + iS + '.tif')
-            img = IPP.enhance2(img)
-            img_w = img[p01:p11, p00:p10]
-            self.w += p10-p00
-            self.h += p11-p01
-            img_w = cv2.resize(img_w, (500, 500), interpolation=cv2.INTER_NEAREST)
-            X[i-1] = (img_w.reshape((1, 250000)))
+                        p0, p1 = landmarks.get_window()
+                        if p00 == -1 or p0[0] < p00:
+                            p00 = p0[0]
+                        if p01 == -1 or p0[1] < p01:
+                            p01 = p0[1]
+                        if p10 == -1 or p1[0] > p10:
+                            p10 = p1[0]
+                        if p11 == -1 or p1[1] > p11:
+                            p11 = p1[1]
+                else:
+                    p00 = -1
+                    p01 = -1
+                    p10 = -1
+                    p11 = -1
+                    for j in range(5, 9):
+                        path = lmk_path + 'landmarks' + str(i) + '-' + str(j) + '.txt'
+                        landmarks = LMS(path)
+                        p0, p1 = landmarks.get_window()
+                        if p00 == -1 or p0[0] < p00:
+                            p00 = p0[0]
+                        if p01 == -1 or p0[1] < p01:
+                            p01 = p0[1]
+                        if p10 == -1 or p1[0] > p10:
+                            p10 = p1[0]
+                        if p11 == -1 or p1[1] > p11:
+                            p11 = p1[1]
+
+                iS = str(i)
+                if i < 10:
+                    iS = '0' + iS
+                img = cv2.imread(img_path + iS + '.tif')
+                img = IPP.enhance2(img)
+                img_w = img[p01:p11, p00:p10]
+                self.w += p10-p00
+                self.h += p11-p01
+                img_w = cv2.resize(img_w, (500, 500), interpolation=cv2.INTER_NEAREST)
+                X[i-1] = (img_w.reshape((1, 250000)))
         self.w = self.w/nr
         self.h = self.h/nr
         return X
@@ -160,7 +164,7 @@ class InsrModel:
 if __name__ == '__main__':
 
     img_path = '_Data/Radiographs/'
-    lmk_path = '_Data/Landmarks/original/landmarks'
+    lmk_path = '_Data/Landmarks/original/'
     tModel = InsrModel(img_path,lmk_path,False)
 
     for id in range(1,10):

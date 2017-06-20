@@ -9,7 +9,7 @@ from numpy import linalg as la
 import Util as ut
 
 class GreyModel:
-    def __init__(self, img_path, lmk_path, tooth_nr, nr=14,k=3, useGrad = False):
+    def __init__(self, img_path, lmk_path, tooth_nr, nr=14,k=3, useGrad = False, leaveOneOut=-1):
 
         self.mu = []
         self.pcm = []
@@ -17,16 +17,18 @@ class GreyModel:
         self.useGrad = useGrad
         X = []
         for i in range(1,nr+1):
-            landmarks = LMS(lmk_path + str(i) + '-' + str(tooth_nr) + '.txt')
-            iS = str(i)
-            if i < 10:
-                iS = '0' + iS
-            img = cv2.imread(img_path + iS + '.tif')
-            if useGrad:
-                img = IPP.GRimg(img)
-            else:
-                img = IPP.enhance2(img)
-            X = self.add2model(X,img, landmarks)
+            if leaveOneOut != i:
+                path = lmk_path + 'landmarks' + str(i) + '-' + str(tooth_nr) + '.txt'
+                landmarks = LMS(path)
+                iS = str(i)
+                if i < 10:
+                    iS = '0' + iS
+                img = cv2.imread(img_path + iS + '.tif')
+                if useGrad:
+                    img = IPP.GRimg(img)
+                else:
+                    img = IPP.enhance2(img)
+                X = self.add2model(X,img, landmarks)
         self.compute_model(X)
 
     def add2model(self,X, img, lmks):
@@ -37,6 +39,7 @@ class GreyModel:
             lX = int(landmark[0])
             lY = int(landmark[1])
             img_neigh = img[lY-k:lY+k+1,lX-k:lX+k+1]
+            # ut.show_image(img_neigh)
             vector = img_neigh.reshape((1,(2*k+1)**2)).squeeze().astype('int32')
             if len(X) == i:
                 X.append([vector])
@@ -46,7 +49,7 @@ class GreyModel:
 
     def compute_model(self,X):
         for tooth_vectors in X:
-            mu,pcm,_ = ut.pca(tooth_vectors,4)
+            mu,pcm,_ = ut.pca(tooth_vectors, 7)
             self.mu.append(mu)
             self.pcm.append(pcm)
 
@@ -103,7 +106,7 @@ class GreyModel:
             error = self.sample_point(vector, l_nr)
             if error < b_error:
                 b_error = error
-                b_steps = i
+                b_steps = abs(i)
                 b_point = [pX,pY]
             elif error == b_error and abs(i) < b_steps:
                 b_steps = abs(i)
@@ -140,7 +143,7 @@ if __name__ == '__main__':
     G_img = IPP.enhance2(img)
 
     img_path = '_Data/Radiographs/'
-    lmk_path = '_Data/Landmarks/original/landmarks'
+    lmk_path = '_Data/Landmarks/original/'
     gModel = GreyModel(img_path,lmk_path,1)
     print 'done 1'
 

@@ -2,17 +2,21 @@ import cv2
 import numpy as np
 from numpy import linalg as la
 
-def show_image(img):
-        cv2.namedWindow('img',cv2.WINDOW_NORMAL)
-        cv2.resizeWindow('img',1500,1000)
-        cv2.imshow('img',img)
-        cv2.waitKey()
+def show_image(img,str,path=None):
+        if path!= None:
+                cv2.imwrite(path, img)
+        cv2.namedWindow(str,cv2.WINDOW_NORMAL)
+        cv2.resizeWindow(str,1500,1000)
+        cv2.imshow(str,img)
+        cv2.waitKey(1000)
+        cv2.destroyAllWindows()
         
-def plot_polyLines(img,points):
+def plot_polyLines(img,points,name, path=None):
         img = img.copy()
         points = np.reshape(points,(-1,1,2))
         cv2.polylines(img,points,True,(0,0,255),thickness=5)
-        show_image(img)
+        show_image(img,name,path)
+
 
 
 def pca(X,n=-1):

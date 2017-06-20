@@ -171,7 +171,8 @@ def find_POI(img, window, isUp):
     cv2.line(img3,(g3,0),(g3,h),(255,0,0),thickness=2)
 
     cv2.imshow('img',img3)
-    cv2.waitKey(0)
+    cv2.waitKey(1000)
+    cv2.destroyAllWindows()
 
     POI = [int((0+g1)/2),int((g1+g2)/2),int((g2+g3)/2),int((g3+w)/2)]
 

@@ -18,23 +18,24 @@ p2 = fig.add_subplot(132)
 p3 = fig.add_subplot(133)
 
 class ASM:
-    def __init__(self, folder_path, nbImgs, nbDims, tooth, doPlot = False):
+    def __init__(self, folder_path, nbImgs, nbDims, tooth, doPlot = False, leaveOneOut=-1):
         self.mu = None
         self.pcm = None
         self.eW = None
         self.mW = [0,0]
 
-        self.computeModel(folder_path,tooth,nbImgs,nbDims, doPlot)
+        self.computeModel(folder_path,tooth,nbImgs,nbDims, doPlot, leaveOneOut)
 
-    def computeModel(self, folder_path, toothNbr, nbImgs, nbDims, doPlot=False):
+    def computeModel(self, folder_path, toothNbr, nbImgs, nbDims, doPlot=False, leaveOneOut=-1):
         all_landmarks = []
         for i in range(1, nbImgs + 1):
-            path = folder_path + 'landmarks' + str(i) + '-' + str(toothNbr) + '.txt'
-            landmark = Landmarks(path)
-            w, h = landmark.get_dimensions()
-            self.mW[0] += w
-            self.mW[1] += h
-            all_landmarks.append(landmark.translate_to_origin())
+            if leaveOneOut != i:
+                path = folder_path + 'landmarks' + str(i) + '-' + str(toothNbr) + '.txt'
+                landmark = Landmarks(path)
+                w, h = landmark.get_dimensions()
+                self.mW[0] += w
+                self.mW[1] += h
+                all_landmarks.append(landmark.translate_to_origin())
         self.mW = np.divide(self.mW ,len(all_landmarks))
 
         mu = all_landmarks[0].scale_to_unit()
@@ -176,40 +177,43 @@ if __name__ == '__main__':
     folder = '_Data/landmarks/original/'
     nbImgs = 14
     nbDims = 40
-    tooth = 1
 
-    asm = ASM(folder, nbImgs, nbDims, tooth, True)
-
-    # plt.clf()
-    fig = plt.figure()
-    weights = [-3,-2,-1,0,1,2,3]
-    for j in range(0,7):
-        p = fig.add_subplot(int('24' + str(j+1)))
-        for i in range(0,7):
-            pts = [0,0,0,0,0,0,0]
-            pts[j] = weights[i]
-            pts = np.transpose(pts)
-            pts = ut.reconstruct(pts,asm.mu,asm.pcm)
-            p.plot(pts[:40],pts[40:])
-    plt.show()
+    for tooth in range(1,9):
 
 
-    pts = [3, 2, 1, 0, 0, 0, 0]
-    pts = np.transpose(pts)
-    pts = ut.reconstruct(pts, asm.mu, asm.pcm)
-    X = Landmarks(pts).as_vector()
-    print ut.project(X, asm.mu, asm.pcm)
-    print np.dot(asm.pcm.T,asm.pcm)
+        asm = ASM(folder, nbImgs, nbDims, tooth, True)
+
+        # plt.clf()
+        fig = plt.figure()
+        weights = [-3,-2,-1,0,1,2,3]
+        asm.pcm = asm.pcm * asm.eW
+        for j in range(0,7):
+            p = fig.add_subplot(int('24' + str(j+1)))
+            for i in range(0,7):
+                pts = [0,0,0,0,0,0,0]
+                pts[j] = weights[i]
+                pts = np.transpose(pts)
+                pts = ut.reconstruct(pts,asm.mu,asm.pcm)
+                p.plot(pts[:40],pts[40:])
+        plt.show()
 
 
-    tooth1 = Landmarks('_Data/landmarks/original/landmarks2-5.txt')
-    tooth2 = Landmarks('_Data/landmarks/original/landmarks2-2.txt')
-    X, error = asm.model(tooth1,True)
-    X2  = asm.estimate_trans(tooth1.as_matrix())
+        pts = [3, 2, 1, 0, 0, 0, 0]
+        pts = np.transpose(pts)
+        pts = ut.reconstruct(pts, asm.mu, asm.pcm)
+        X = Landmarks(pts).as_vector()
+        print ut.project(X, asm.mu, asm.pcm)
+        print np.dot(asm.pcm.T,asm.pcm)
 
-    print "The error of a matching tooth: ", error
-    X, error = asm.model(tooth2,True)
-    print "The error of a non-matching tooth: ", error
+
+        tooth1 = Landmarks('_Data/landmarks/original/landmarks2-5.txt')
+        tooth2 = Landmarks('_Data/landmarks/original/landmarks2-2.txt')
+        X, error = asm.model(tooth1,True)
+        X2  = asm.estimate_trans(tooth1.as_matrix())
+
+        print "The error of a matching tooth: ", error
+        X, error = asm.model(tooth2,True)
+        print "The error of a non-matching tooth: ", error
 
 
 

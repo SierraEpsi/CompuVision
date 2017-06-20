@@ -6,7 +6,7 @@ def enhance(img):
     img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     img = cv2.medianBlur(img,7)
     img = cv2.bilateralFilter(img, 9, 500, 500)
-    return img;
+    return img
 
 def enhance2(img):
     img = enhance(img)
